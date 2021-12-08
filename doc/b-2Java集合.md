@@ -58,17 +58,7 @@ public interface RandomAccess {
 
 ![双向循环链表](https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-6/双向循环链表.png)
 
-### 2.2.3 ArrayList 与 Vector 区别呢?为什么要用Arraylist取代Vector呢？
-
-`Vector`类的所有方法都是同步的。可以由两个线程安全地访问一个Vector对象、但是一个线程访问Vector的话代码要在同步操作上耗费大量的时间。
-
-`Arraylist`不是同步的，所以在不需要保证线程安全时建议使用Arraylist。
-
-### 2.2.4 说一说 ArrayList 的扩容机制吧
-
-详见笔主的这篇文章:[通过源码一步一步分析ArrayList 扩容机制](https://github.com/Snailclimb/JavaGuide/blob/master/docs/java/collection/ArrayList-Grow.md)
-
-### 2.2.5 HashMap 和 Hashtable 的区别
+### 2.2.3 HashMap 和 Hashtable 的区别
 
 1. **线程是否安全：** HashMap 是非线程安全的，HashTable 是线程安全的；HashTable 内部的方法基本都经过`synchronized` 修饰。（如果你要保证线程安全的话就使用 ConcurrentHashMap 吧！）；
 2. **效率：** 因为线程安全的问题，HashMap 要比 HashTable 效率高一点。另外，HashTable 基本被淘汰，不要在代码中使用它；
@@ -113,7 +103,7 @@ public interface RandomAccess {
     }
 ```
 
-### 2.2.6 HashMap 和 HashSet区别
+### 2.2.4 HashMap 和 HashSet区别
 
 如果你看过 `HashSet` 源码的话就应该知道：HashSet 底层就是基于 HashMap 实现的。（HashSet 的源码非常非常少，因为除了 `clone() `、`writeObject()`、`readObject()`是 HashSet 自己不得不实现之外，其他方法都是直接调用 HashMap 中的方法。
 
@@ -124,7 +114,7 @@ public interface RandomAccess {
 |  调用 `put（）`向map中添加元素   |              调用 `add（）`方法向Set中添加元素               |
 | HashMap使用键（Key）计算Hashcode | HashSet使用成员对象来计算hashcode值，对于两个对象来说hashcode可能相同，所以equals()方法用来判断对象的相等性， |
 
-### 2.2.7 HashSet如何检查重复
+### 2.2.5 HashSet如何检查重复
 
 当你把对象加入`HashSet`时，HashSet会先计算对象的`hashcode`值来判断对象加入的位置，同时也会与其他加入的对象的hashcode值作比较，如果没有相符的hashcode，HashSet会假设对象没有重复出现。但是如果发现有相同hashcode值的对象，这时会调用`equals（）`方法来检查hashcode相等的对象是否真的相同。如果两者相同，HashSet就不会让加入操作成功。（摘自我的Java启蒙书《Head fist java》第二版）
 
@@ -146,7 +136,7 @@ public interface RandomAccess {
 >
 > **介绍:** Github 70k Star 项目  **[JavaGuide](https://github.com/Snailclimb/JavaGuide)**（公众号同名） 作者。每周都会在公众号更新一些自己原创干货。公众号后台回复“1”领取Java工程师必备学习资料+面试突击pdf。
 
-### 2.2.8 HashMap的底层实现
+### 2.2.6 HashMap的底层实现
 
 #### JDK1.8之前
 
@@ -199,7 +189,7 @@ static int hash(int h) {
 
 - 《Java 8系列之重新认识HashMap》 ：<https://zhuanlan.zhihu.com/p/21673805>
 
-### 2.2.9 HashMap 的长度为什么是2的幂次方
+### 2.2.7 HashMap 的长度为什么是2的幂次方
 
 为了能让 HashMap 存取高效，尽量较少碰撞，也就是要尽量把数据分配均匀。我们上面也讲到了过了，Hash 值的范围值-2147483648到2147483647，前后加起来大概40亿的映射空间，只要哈希函数映射得比较均匀松散，一般应用是很难出现碰撞的。但问题是一个40亿长度的数组，内存是放不下的。所以这个散列值是不能直接拿来用的。用之前还要先做对数组的长度取模运算，得到的余数才能用来要存放的位置也就是对应的数组下标。这个数组下标的计算方法是“ `(n - 1) & hash`”。（n代表数组长度）。这也就解释了 HashMap 的长度为什么是2的幂次方。
 
@@ -207,13 +197,7 @@ static int hash(int h) {
 
 我们首先可能会想到采用%取余的操作来实现。但是，重点来了：**“取余(%)操作中如果除数是2的幂次则等价于与其除数减一的与(&)操作（也就是说 hash%length==hash&(length-1)的前提是 length 是2的 n 次方；）。”** 并且 **采用二进制位操作 &，相对于%能够提高运算效率，这就解释了 HashMap 的长度为什么是2的幂次方。**
 
-### 2.2.10 HashMap 多线程操作导致死循环问题
-
-主要原因在于 并发下的Rehash 会造成元素之间会形成一个循环链表。不过，jdk 1.8 后解决了这个问题，但是还是不建议在多线程下使用 HashMap,因为多线程下使用 HashMap 还是会存在其他问题比如数据丢失。并发环境下推荐使用 ConcurrentHashMap 。
-
-详情请查看：<https://coolshell.cn/articles/9606.html>
-
-### 2.2.11 ConcurrentHashMap 和 Hashtable 的区别
+### 2.2.8 ConcurrentHashMap 和 Hashtable 的区别
 
 ConcurrentHashMap 和 Hashtable 的区别主要体现在实现线程安全的方式上不同。
 
@@ -236,7 +220,7 @@ ConcurrentHashMap 和 Hashtable 的区别主要体现在实现线程安全的方
 
 ![JDK1.8的ConcurrentHashMap](https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-6/JDK1.8-ConcurrentHashMap-Structure.jpg)
 
-### 2.2.12 ConcurrentHashMap线程安全的具体实现方式/底层具体实现
+### 2.2.9 ConcurrentHashMap线程安全的具体实现方式/底层具体实现
 
 #### JDK1.7（上面有示意图）
 
@@ -259,137 +243,7 @@ ConcurrentHashMap取消了Segment分段锁，采用CAS和synchronized来保证�
 
 synchronized只锁定当前链表或红黑二叉树的首节点，这样只要hash不冲突，就不会产生并发，效率又提升N倍。
 
-### 2.2.13 comparable 和 Comparator的区别
-
-- comparable接口实际上是出自java.lang包 它有一个 `compareTo(Object obj)`方法用来排序
-- comparator接口实际上是出自 java.util 包它有一个`compare(Object obj1, Object obj2)`方法用来排序
-
-一般我们需要对一个集合使用自定义排序时，我们就要重写`compareTo()`方法或`compare()`方法，当我们需要对某一个集合实现两种排序方式，比如一个song对象中的歌名和歌手名分别采用一种排序方法的话，我们可以重写`compareTo()`方法和使用自制的Comparator方法或者以两个Comparator来实现歌名排序和歌星名排序，第二种代表我们只能使用两个参数版的 `Collections.sort()`.
-
-#### Comparator定制排序
-
-```java
-        ArrayList<Integer> arrayList = new ArrayList<Integer>();
-        arrayList.add(-1);
-        arrayList.add(3);
-        arrayList.add(3);
-        arrayList.add(-5);
-        arrayList.add(7);
-        arrayList.add(4);
-        arrayList.add(-9);
-        arrayList.add(-7);
-        System.out.println("原始数组:");
-        System.out.println(arrayList);
-        // void reverse(List list)：反转
-        Collections.reverse(arrayList);
-        System.out.println("Collections.reverse(arrayList):");
-        System.out.println(arrayList);
-
-        // void sort(List list),按自然排序的升序排序
-        Collections.sort(arrayList);
-        System.out.println("Collections.sort(arrayList):");
-        System.out.println(arrayList);
-        // 定制排序的用法
-        Collections.sort(arrayList, new Comparator<Integer>() {
-
-            @Override
-            public int compare(Integer o1, Integer o2) {
-                return o2.compareTo(o1);
-            }
-        });
-        System.out.println("定制排序后：");
-        System.out.println(arrayList);
-```
-
-Output:
-
-```
-原始数组:
-[-1, 3, 3, -5, 7, 4, -9, -7]
-Collections.reverse(arrayList):
-[-7, -9, 4, 7, -5, 3, 3, -1]
-Collections.sort(arrayList):
-[-9, -7, -5, -1, 3, 3, 4, 7]
-定制排序后：
-[7, 4, 3, 3, -1, -5, -7, -9]
-```
-
-#### 重写compareTo方法实现按年龄来排序
-
-```java
-// person对象没有实现Comparable接口，所以必须实现，这样才不会出错，才可以使treemap中的数据按顺序排列
-// 前面一个例子的String类已经默认实现了Comparable接口，详细可以查看String类的API文档，另外其他
-// 像Integer类等都已经实现了Comparable接口，所以不需要另外实现了
-
-public  class Person implements Comparable<Person> {
-    private String name;
-    private int age;
-
-    public Person(String name, int age) {
-        super();
-        this.name = name;
-        this.age = age;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    public void setAge(int age) {
-        this.age = age;
-    }
-
-    /**
-     * TODO重写compareTo方法实现按年龄来排序
-     */
-    @Override
-    public int compareTo(Person o) {
-        // TODO Auto-generated method stub
-        if (this.age > o.getAge()) {
-            return 1;
-        } else if (this.age < o.getAge()) {
-            return -1;
-        }
-        return age;
-    }
-}
-
-```
-
-```java
-    public static void main(String[] args) {
-        TreeMap<Person, String> pdata = new TreeMap<Person, String>();
-        pdata.put(new Person("张三", 30), "zhangsan");
-        pdata.put(new Person("李四", 20), "lisi");
-        pdata.put(new Person("王五", 10), "wangwu");
-        pdata.put(new Person("小红", 5), "xiaohong");
-        // 得到key的值的同时得到key所对应的值
-        Set<Person> keys = pdata.keySet();
-        for (Person key : keys) {
-            System.out.println(key.getAge() + "-" + key.getName());
-
-        }
-    }
-```
-
-Output：
-
-```
-5-小红
-10-王五
-20-李四
-30-张三
-```
-
-### 2.2.14 集合框架底层数据结构总结
+### 2.2.10 集合框架底层数据结构总结
 
 #### Collection
 
