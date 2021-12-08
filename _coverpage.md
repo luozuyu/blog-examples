@@ -4,6 +4,6 @@
 </p>
 <h1 align="center">blog-examples</h1>
 
-[常用资源](https://yuque.com/)
+[语雀](https://yuque.com/)
 [Gitee](https://gitee.com/luozuyu)
 [开始阅读](#blog-examples)

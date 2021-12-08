@@ -6,10 +6,6 @@ Java 虚拟机在执行 Java 程序的过程中会把它管理的内存划分成
 
 **JDK 1.8 ：**
 
-<div align="center">  
-  <img src="https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-3Java运行时数据区域JDK1.8.png" width="600px"/>
-</div>
-
 <div align="center">
 	<img src="http://cdn.processon.com/5ed9f76ff346fb1712e271eb?e=1591346559&token=trhI0BY8QfVrIGn9nENop6JAc6l5nZuxhjQ62UfM:hKMLh2n8wpCUC3w7NrAw_Nq5fYE=" width="600px" />
 </div>
@@ -25,103 +21,6 @@ Java 虚拟机在执行 Java 程序的过程中会把它管理的内存划分成
 - 堆
 - 方法区
 - 直接内存(非运行时数据区的一部分)
-
-#### 程序计数器
-
-程序计数器是一块较小的内存空间，可以看作是当前线程所执行的字节码的行号指示器。**字节码解释器工作时通过改变这个计数器的值来选取下一条需要执行的字节码指令，分支、循环、跳转、异常处理、线程恢复等功能都需要依赖这个计数器来完。**
-
-另外，**为了线程切换后能恢复到正确的执行位置，每条线程都需要有一个独立的程序计数器，各线程之间计数器互不影响，独立存储，我们称这类内存区域为“线程私有”的内存。**
-
-**从上面的介绍中我们知道程序计数器主要有两个作用：**
-
-1. 字节码解释器通过改变程序计数器来依次读取指令，从而实现代码的流程控制，如：顺序执行、选择、循环、异常处理。
-2. 在多线程的情况下，程序计数器用于记录当前线程执行的位置，从而当线程被切换回来的时候能够知道该线程上次运行到哪儿了。
-
-**注意：程序计数器是唯一一个不会出现 OutOfMemoryError 的内存区域，它的生命周期随着线程的创建而创建，随着线程的结束而死亡。**
-
-#### Java 虚拟机栈
-
-**与程序计数器一样，Java虚拟机栈也是线程私有的，它的生命周期和线程相同，描述的是 Java 方法执行的内存模型，每次方法调用的数据都是通过栈传递的。**
-
-**Java 内存可以粗糙的区分为堆内存（Heap）和栈内存(Stack),其中栈就是现在说的虚拟机栈，或者说是虚拟机栈中局部变量表部分。** （实际上，Java虚拟机栈是由一个个栈帧组成，而每个栈帧中都拥有：局部变量表、操作数栈、动态链接、方法出口信息。）
-
-**局部变量表主要存放了编译器可知的各种数据类型**（boolean、byte、char、short、int、float、long、double）、**对象引用**（reference类型，它不同于对象本身，可能是一个指向对象起始地址的引用指针，也可能是指向一个代表对象的句柄或其他与此对象相关的位置）。
-
-**Java 虚拟机栈会出现两种异常：StackOverFlowError 和 OutOfMemoryError。**
-
-- **StackOverFlowError：** 若Java虚拟机栈的内存大小不允许动态扩展，那么当线程请求栈的深度超过当前Java虚拟机栈的最大深度的时候，就抛出StackOverFlowError异常。
-- **OutOfMemoryError：** 若 Java 虚拟机栈的内存大小允许动态扩展，且当线程请求栈时内存用完了，无法再动态扩展了，此时抛出OutOfMemoryError异常。
-
-Java 虚拟机栈也是线程私有的，每个线程都有各自的Java虚拟机栈，而且随着线程的创建而创建，随着线程的死亡而死亡。
-
-**扩展：那么方法/函数如何调用？**
-
-Java 栈可用类比数据结构中栈，Java 栈中保存的主要内容是栈帧，每一次函数调用都会有一个对应的栈帧被压入Java栈，每一个函数调用结束后，都会有一个栈帧被弹出。
-
-Java方法有两种返回方式：
-
-1. return 语句。
-2. 抛出异常。
-
-不管哪种返回方式都会导致栈帧被弹出。
-
-#### 本地方法栈
-
-和虚拟机栈所发挥的作用非常相似，区别是： **虚拟机栈为虚拟机执行 Java 方法 （也就是字节码）服务，而本地方法栈则为虚拟机使用到的 Native 方法服务。** 在 HotSpot 虚拟机中和 Java 虚拟机栈合二为一。
-
-本地方法被执行的时候，在本地方法栈也会创建一个栈帧，用于存放该本地方法的局部变量表、操作数栈、动态链接、出口信息。
-
-方法执行完毕后相应的栈帧也会出栈并释放内存空间，也会出现 StackOverFlowError 和 OutOfMemoryError 两种异常。
-
-#### 堆
-
-Java 虚拟机所管理的内存中最大的一块，Java 堆是所有线程共享的一块内存区域，在虚拟机启动时创建。**此内存区域的唯一目的就是存放对象实例，几乎所有的对象实例以及数组都在这里分配内存。**
-
-Java 堆是垃圾收集器管理的主要区域，因此也被称作**GC堆（Garbage Collected Heap）**.从垃圾回收的角度，由于现在收集器基本都采用分代垃圾收集算法，所以Java堆还可以细分为：新生代和老年代：再细致一点有：Eden空间、From Survivor、To Survivor空间等。**进一步划分的目的是更好地回收内存，或者更快地分配内存。**
-
-<div align="center">  
-<img src="https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-3堆结构.png" width="400px"/>
-</div>
-
-上图所示的 eden区、s0区、s1区都属于新生代，tentired 区属于老年代。大部分情况，对象都会首先在 Eden 区域分配，在一次新生代垃圾回收后，如果对象还存活，则会进入 s0 或者 s1，并且对象的年龄还会加 1(Eden区->Survivor 区后对象的初始年龄变为1)，当它的年龄增加到一定程度（默认为15岁），就会被晋升到老年代中。对象晋升到老年代的年龄阈值，可以通过参数 `-XX:MaxTenuringThreshold` 来设置。
-
-#### 方法区
-
-方法区与 Java 堆一样，是各个线程共享的内存区域，它用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据。虽然Java虚拟机规范把方法区描述为堆的一个逻辑部分，但是它却有一个别名叫做 **Non-Heap（非堆）**，目的应该是与 Java 堆区分开来。
-
-方法区也被称为永久代。很多人都会分不清方法区和永久代的关系，为此我也查阅了文献。
-
-##### 方法区和永久代的关系
-
-> 《Java虚拟机规范》只是规定了有方法区这么个概念和它的作用，并没有规定如何去实现它。那么，在不同的 JVM 上方法区的实现肯定是不同的了。  **方法区和永久代的关系很像Java中接口和类的关系，类实现了接口，而永久代就是HotSpot虚拟机对虚拟机规范中方法区的一种实现方式。** 也就是说，永久代是HotSpot的概念，方法区是Java虚拟机规范中的定义，是一种规范，而永久代是一种实现，一个是标准一个是实现，其他的虚拟机实现并没有永久带这一说法。
-
-##### 常用参数
-
-JDK 1.8 之前永久代还没被彻底移除的时候通常通过下面这些参数来调节方法区大小
-
-```java
--XX:PermSize=N //方法区(永久代)初始大小
--XX:MaxPermSize=N //方法区(永久代)最大大小,超过这个值将会抛出OutOfMemoryError异常:java.lang.OutOfMemoryError: PermGen
-```
-
-相对而言，垃圾收集行为在这个区域是比较少出现的，但并非数据进入方法区后就“永久存在”了。**
-
-JDK 1.8 的时候，方法区（HotSpot的永久代）被彻底移除了（JDK1.7就已经开始了），取而代之是元空间，元空间使用的是直接内存。
-
-下面是一些常用参数：
-
-```java
--XX:MetaspaceSize=N //设置Metaspace的初始（和最小大小）
--XX:MaxMetaspaceSize=N //设置Metaspace的最大大小
-```
-
-与永久代很大的不同就是，如果不指定大小的话，随着更多类的创建，虚拟机会耗尽所有可用的系统内存。
-
-##### 为什么要将永久代(PermGen)替换为元空间(MetaSpace)呢?
-
-整个永久代有一个 JVM 本身设置固定大小上线，无法进行调整，而元空间使用的是直接内存，受本机可用内存的限制，并且永远不会得到java.lang.OutOfMemoryError。你可以使用 `-XX：MaxMetaspaceSize` 标志设置最大元空间大小，默认值为 unlimited，这意味着它只受系统内存的限制。`-XX：MetaspaceSize` 调整标志定义元空间的初始大小如果未指定此标志，则 Metaspace 将根据运行时的应用程序需求动态地重新调整大小。
-
-当然这只是其中一个原因，还有很多底层的原因，这里就不提了。
 
 #### 运行时常量池
 
@@ -142,28 +41,7 @@ JDK1.4 中新加入的 **NIO(New Input/Output) 类**，引入了一种基于**�
 
 本机直接内存的分配不会收到 Java 堆的限制，但是，既然是内存就会受到本机总内存大小以及处理器寻址空间的限制。
 
-### 2.4.2 说一下堆内存中对象的分配的基本策略
-
-**堆空间的基本结构：**
-
-<div align="center">  
-<img src="https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-3堆结构.png" width="400px"/>
-</div>
-
-上图所示的 eden区、s0区、s1区都属于新生代，tentired 区属于老年代。大部分情况，对象都会首先在 Eden 区域分配，在一次新生代垃圾回收后，如果对象还存活，则会进入 s0 或者 s1，并且对象的年龄还会加 1(Eden区->Survivor 区后对象的初始年龄变为1)，当它的年龄增加到一定程度（默认为15岁），就会被晋升到老年代中。对象晋升到老年代的年龄阈值，可以通过参数 `-XX:MaxTenuringThreshold` 来设置。
-
-另外，大对象和长期存活的对象会直接进入老年代。
-
-![堆内存常见分配策略](https://images.xiaozhuanlan.com/photo/2019/8b15e0786919315de03da1f92d493b8d.jpg)
-
-### 2.4.3 Minor Gc和Full GC 有什么不同呢？
-
-大多数情况下，对象在新生代中 eden 区分配。当 eden 区没有足够空间进行分配时，虚拟机将发起一次Minor GC。
-
-- **新生代GC（Minor GC）**:指发生新生代的的垃圾收集动作，Minor GC非常频繁，回收速度一般也比较快。
-- **老年代GC（Major GC/Full GC）**:指发生在老年代的GC，出现了Major GC经常会伴随至少一次的Minor GC（并非绝对），Major GC的速度一般会比Minor GC的慢10倍以上。
-
-### 2.4.4 如何判断对象是否死亡?(两种方法)
+### 2.4.2 如何判断对象是否死亡?(两种方法)
 
 堆中几乎放着所有的对象实例，对堆垃圾回收前的第一步就是要判断哪些对象已经死亡（即不能再被任何途径使用的对象）。
 
@@ -177,9 +55,15 @@ JDK1.4 中新加入的 **NIO(New Input/Output) 类**，引入了一种基于**�
 
 ![可达性分析算法](https://images.xiaozhuanlan.com/photo/2019/7ba1179cfa1bba68f85cd7538256a5a1.jpg)
 
-### 2.4.5 垃圾收集有哪些算法，各自的特点？
+> 并发的可达性分析
+>
+> 当前主流编程语言的垃圾收集器基本上都是依靠可达性分析算法来判定对象是否存活的，可达性分析算法理论上要求全过程都基于一个能保障一致性的快照中才能够进行分析，这意味着必须全程冻结用户线程的运行。可从GC Roots再继续往下遍历对象图，这一步骤的停顿时间就必定会与Java堆容量直接成正比例关系了：堆越大，存储的对象越多，对象图结构越复杂，要标记更多对象而产生的停顿时间自然就更长，这听起来是理所当然的事情。
+>
+> 想解决或者降低用户线程的停顿，就要先搞清楚为什么必须在一个能保障一致性的快照上才能进行对象图的遍历？为了能解释清楚这个问题，我们引入三色标记（Tri-color Marking）作为工具来辅助推导，把遍历对象图过程中遇到的对象，按照“是否访问过”这个条件标记成以下三种颜色：
+>
+> ![三色标记](b-4jvm-colors.jpg)
 
-![垃圾收集算法分类](https://images.xiaozhuanlan.com/photo/2019/da5619d747fb4f9207e7359463b05491.jpg)
+### 2.4.3 垃圾收集有哪些算法，各自的特点？
 
 #### 标记-清除算法
 
@@ -208,11 +92,7 @@ JDK1.4 中新加入的 **NIO(New Input/Output) 类**，引入了一种基于**�
 
 **比如在新生代中，每次收集都会有大量对象死去，所以可以选择复制算法，只需要付出少量对象的复制成本就可以完成每次垃圾收集。而老年代的对象存活几率是比较高的，而且没有额外的空间对它进行分配担保，所以我们必须选择“标记-清除”或“标记-整理”算法进行垃圾收集。**
 
-### 2.4.6 HotSpot为什么要分为新生代和老年代？
-
-主要是为了提升GC效率。上面提到的分代收集算法已经很好的解释了这个问题。
-
-### 2.4.7 常见的垃圾回收器有那些?
+### 2.4.4 常见的垃圾回收器有那些?
 
 ![垃圾收集器分类](https://images.xiaozhuanlan.com/photo/2019/da5619d747fb4f9207e7359463b05491.jpg)
 
@@ -314,7 +194,7 @@ G1收集器的运作大致分为以下几个步骤：
 
 **G1收集器在后台维护了一个优先列表，每次根据允许的收集时间，优先选择回收价值最大的Region(这也就是它的名字Garbage-First的由来)**。这种使用Region划分内存空间以及有优先级的区域回收方式，保证了GF收集器在有限时间内可以尽可能高的收集效率（把内存化整为零）。
 
-### 2.4.8 类加载过程
+### 2.4.5 类加载过程
 
 #### 知道类加载的过程吗？
 
@@ -332,38 +212,7 @@ JVM 中内置了三个重要的 ClassLoader，除了 BootstrapClassLoader 其他
 
 #### 双亲委派模型知道吗？能介绍一下吗?
 
-##### 双亲委派模型介绍
-
-每一个类都有一个对应它的类加载器。系统中的 ClassLoder 在协同工作的时候会默认使用 **双亲委派模型** 。即在类加载的时候，系统会首先判断当前类是否被加载过。已经被加载的类会直接返回，否则才会尝试加载。**加载的时候，首先会把该请求委派该父类加载器的 `loadClass()` 处理，因此所有的请求最终都应该传送到顶层的启动类加载器 `BootstrapClassLoader` 中。当父类加载器无法处理时，才由自己来处理。**当父类加载器为null时，会使用启动类加载器 `BootstrapClassLoader` 作为父类加载器。
-
 ![ClassLoader](https://images.xiaozhuanlan.com/photo/2019/80f3af661a8724c4dee84411c166c03d.png)
-
-每个类加载都有一个父类加载器，我们通过下面的程序来验证。
-
-```java
-public class ClassLoaderDemo {
-    public static void main(String[] args) {
-        System.out.println("ClassLodarDemo's ClassLoader is " + ClassLoaderDemo.class.getClassLoader());
-        System.out.println("The Parent of ClassLodarDemo's ClassLoader is " + ClassLoaderDemo.class.getClassLoader().getParent());
-        System.out.println("The GrandParent of ClassLodarDemo's ClassLoader is " + ClassLoaderDemo.class.getClassLoader().getParent().getParent());
-    }
-}
-```
-
-Output
-
-```
-ClassLodarDemo's ClassLoader is sun.misc.Launcher$AppClassLoader@18b4aac2
-The Parent of ClassLodarDemo's ClassLoader is sun.misc.Launcher$ExtClassLoader@1b6d3586
-The GrandParent of ClassLodarDemo's ClassLoader is null
-```
-
-`AppClassLoader`的父类加载器为`ExtClassLoader`
-`ExtClassLoader`的父类加载器为null，**null并不代表`ExtClassLoader`没有父类加载器，而是 `Bootstrap ClassLoader`** 。
-
-其实这个双亲翻译的容易让别人误解，我们一般理解的双亲都是父母，这里的双亲更多地表达的是“父母这一辈”的人而已，并不是说真的有一个 Mather ClassLoader 和一个 Father ClassLoader 。另外，类加载器之间的“父子”关系也不是通过继承来体现的，是由“优先级”来决定。官方API文档对这部分的描述如下:
-
-> The Java platform uses a delegation model for loading classes. **The basic idea is that every class loader has a "parent" class loader.** When loading a class, a class loader first "delegates" the search for the class to its parent class loader before attempting to find the class itself.
 
 ##### 双亲委派模型实现源码分析
 
@@ -419,4 +268,3 @@ protected Class<?> loadClass(String name, boolean resolve)
 ##### 如何自定义类加载器?
 
 除了 `BootstrapClassLoader` 其他类加载器均由 Java 实现且全部继承自`java.lang.ClassLoader`。如果我们要自定义自己的类加载器，很明显需要继承 `ClassLoader`。
-
