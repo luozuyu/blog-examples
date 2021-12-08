@@ -5,5 +5,5 @@
 <h1 align="center">blog-examples</h1>
 
 [常用资源](https://yuque.com/)
-[GitHub](https://github.com/luozuyu)
+[Gitee](https://gitee.com/luozuyu)
 [开始阅读](#blog-examples)
