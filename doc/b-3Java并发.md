@@ -1,52 +1,10 @@
-
-
 ## 2.3 juc
 
 ## 1.synchronized 关键字
 
-### 1.1.说一说自己对于 synchronized 关键字的了解
-
-**`synchronized` 关键字解决的是多个线程之间访问资源的同步性，`synchronized`关键字可以保证被它修饰的方法或者代码块在任意时刻只能有一个线程执行。**
-
-另外，在 Java 早期版本中，`synchronized` 属于 **重量级锁**，效率低下。
-
-**为什么呢？**
-
-因为监视器锁（monitor）是依赖于底层的操作系统的 `Mutex Lock` 来实现的，Java 的线程是映射到操作系统的原生线程之上的。如果要挂起或者唤醒一个线程，都需要操作系统帮忙完成，而操作系统实现线程之间的切换时需要从用户态转换到内核态，这个状态之间的转换需要相对比较长的时间，时间成本相对较高。
-
-庆幸的是在 Java 6 之后 Java 官方对从 JVM 层面对 `synchronized` 较大优化，所以现在的 `synchronized` 锁效率也优化得很不错了。JDK1.6 对锁的实现引入了大量的优化，如自旋锁、适应性自旋锁、锁消除、锁粗化、偏向锁、轻量级锁等技术来减少锁操作的开销。
-
-所以，你会发现目前的话，不论是各种开源框架还是 JDK 源码都大量使用了 `synchronized` 关键字。
-
-### 1.2. 说说自己是怎么使用 synchronized 关键字
+### 1.1. 说说自己是怎么使用 synchronized 关键字
 
 **synchronized 关键字最主要的三种使用方式：**
-
-**1.修饰实例方法:** 作用于当前对象实例加锁，进入同步代码前要获得 **当前对象实例的锁**
-
-```java
-synchronized void method() {
-    //业务代码
-}
-```
-
-**2.修饰静态方法:** 也就是给当前类加锁，会作用于类的所有对象实例 ，进入同步代码前要获得 **当前 class 的锁**。因为静态成员不属于任何一个实例对象，是类成员（ _static 表明这是该类的一个静态资源，不管 new 了多少个对象，只有一份_）。所以，如果一个线程 A 调用一个实例对象的非静态 `synchronized` 方法，而线程 B 需要调用这个实例对象所属类的静态 `synchronized` 方法，是允许的，不会发生互斥现象，**因为访问静态 `synchronized` 方法占用的锁是当前类的锁，而访问非静态 `synchronized` 方法占用的锁是当前实例对象锁**。
-
-```java
-synchronized static void method() {
-    //业务代码
-}
-```
-
-**3.修饰代码块** ：指定加锁对象，对给定对象/类加锁。`synchronized(this|object)` 表示进入同步代码库前要获得**给定对象的锁**。`synchronized(类.class)` 表示进入同步代码前要获得 **当前 class 的锁**
-
-```java
-synchronized(this) {
-    //业务代码
-}
-```
-
-**总结：**
 
 - `synchronized` 关键字加到 `static` 静态方法和 `synchronized(class)` 代码块上都是是给 Class 类上锁。
 - `synchronized` 关键字加到实例方法上是给对象实例上锁。
@@ -93,65 +51,16 @@ public class Singleton {
 
 使用 `volatile` 可以禁止 JVM 的指令重排，保证在多线程环境下也能正常运行。
 
-### 1.3. 讲一下 synchronized 关键字的底层原理
+### 1.2. 讲一下 synchronized 关键字的底层原理
 
 **synchronized 关键字底层原理属于 JVM 层面。**
-
-#### 1.3.1. synchronized 同步语句块的情况
-
-```java
-public class SynchronizedDemo {
-    public void method() {
-        synchronized (this) {
-            System.out.println("synchronized 代码块");
-        }
-    }
-}
-
-```
-
-通过 JDK 自带的 `javap` 命令查看 `SynchronizedDemo` 类的相关字节码信息：首先切换到类的对应目录执行 `javac SynchronizedDemo.java` 命令生成编译后的 .class 文件，然后执行`javap -c -s -v -l SynchronizedDemo.class`。
-
-![synchronized关键字原理](https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-6/synchronized关键字原理.png)
-
-从上面我们可以看出：
-
-**`synchronized` 同步语句块的实现使用的是 `monitorenter` 和 `monitorexit` 指令，其中 `monitorenter` 指令指向同步代码块的开始位置，`monitorexit` 指令则指明同步代码块的结束位置。**
-
-当执行 `monitorenter` 指令时，线程试图获取锁也就是获取 **对象监视器 `monitor`** 的持有权。
-
-> 在 Java 虚拟机(HotSpot)中，Monitor 是基于 C++实现的，由[ObjectMonitor](https://github.com/openjdk-mirror/jdk7u-hotspot/blob/50bdefc3afe944ca74c3093e7448d6b889cd20d1/src/share/vm/runtime/objectMonitor.cpp)实现的。每个对象中都内置了一个 `ObjectMonitor`对象。
->
-> 另外，`wait/notify`等方法也依赖于`monitor`对象，这就是为什么只有在同步的块或者方法中才能调用`wait/notify`等方法，否则会抛出`java.lang.IllegalMonitorStateException`的异常的原因。
-
-在执行`monitorenter`时，会尝试获取对象的锁，如果锁的计数器为 0 则表示锁可以被获取，获取后将锁计数器设为 1 也就是加 1。
-
-在执行 `monitorexit` 指令后，将锁计数器设为 0，表明锁被释放。如果获取对象锁失败，那当前线程就要阻塞等待，直到锁被另外一个线程释放为止。
-
-#### 1.3.2. synchronized 修饰方法的的情况
-
-```java
-public class SynchronizedDemo2 {
-    public synchronized void method() {
-        System.out.println("synchronized 方法");
-    }
-}
-
-```
-
-![synchronized关键字原理](https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-6/synchronized关键字原理2.png)
-
-`synchronized` 修饰的方法并没有 `monitorenter` 指令和 `monitorexit` 指令，取得代之的确实是 `ACC_SYNCHRONIZED` 标识，该标识指明了该方法是一个同步方法。JVM 通过该 `ACC_SYNCHRONIZED` 访问标志来辨别一个方法是否声明为同步方法，从而执行相应的同步调用。
-
-#### 1.3.3.总结
-
 `synchronized` 同步语句块的实现使用的是 `monitorenter` 和 `monitorexit` 指令，其中 `monitorenter` 指令指向同步代码块的开始位置，`monitorexit` 指令则指明同步代码块的结束位置。
 
 `synchronized` 修饰的方法并没有 `monitorenter` 指令和 `monitorexit` 指令，取得代之的确实是 `ACC_SYNCHRONIZED` 标识，该标识指明了该方法是一个同步方法。
 
 **不过两者的本质都是对对象监视器 monitor 的获取。**
 
-### 1.4. 说说 JDK1.6 之后的 synchronized 关键字底层做了哪些优化，可以详细介绍一下这些优化吗
+### 1.3. 说说 JDK1.6 之后的 synchronized 关键字底层做了哪些优化，可以详细介绍一下这些优化吗
 
 JDK1.6 对锁的实现引入了大量的优化，如偏向锁、轻量级锁、自旋锁、适应性自旋锁、锁消除、锁粗化等技术来减少锁操作的开销。
 
@@ -159,17 +68,17 @@ JDK1.6 对锁的实现引入了大量的优化，如偏向锁、轻量级锁、�
 
 关于这几种优化的详细信息可以查看下面这篇文章：[Java6 及以上版本对 synchronized 的优化](https://www.cnblogs.com/wuqinglong/p/9945618.html)
 
-### 1.5. 谈谈 synchronized 和 ReentrantLock 的区别
+### 1.4. 谈谈 synchronized 和 ReentrantLock 的区别
 
-#### 1.5.1. 两者都是可重入锁
+**两者都是可重入锁**
 
 **“可重入锁”** 指的是自己可以再次获取自己的内部锁。比如一个线程获得了某个对象的锁，此时这个对象锁还没有释放，当其再次想要获取这个对象的锁的时候还是可以获取的，如果不可锁重入的话，就会造成死锁。同一个线程每次获取锁，锁的计数器都自增 1，所以要等到锁的计数器下降为 0 时才能释放锁。
 
-#### 1.5.2.synchronized 依赖于 JVM 而 ReentrantLock 依赖于 API
+**synchronized 依赖于 JVM 而 ReentrantLock 依赖于 API**
 
 `synchronized` 是依赖于 JVM 实现的，前面我们也讲到了 虚拟机团队在 JDK1.6 为 `synchronized` 关键字进行了很多优化，但是这些优化都是在虚拟机层面实现的，并没有直接暴露给我们。`ReentrantLock` 是 JDK 层面实现的（也就是 API 层面，需要 lock() 和 unlock() 方法配合 try/finally 语句块来完成），所以我们可以通过查看它的源代码，来看它是如何实现的。
 
-#### 1.5.3.ReentrantLock 比 synchronized 增加了一些高级功能
+**ReentrantLock 比 synchronized 增加了一些高级功能**
 
 相比`synchronized`，`ReentrantLock`增加了一些高级功能。主要来说主要有三点：
 
@@ -183,17 +92,9 @@ JDK1.6 对锁的实现引入了大量的优化，如偏向锁、轻量级锁、�
 
 ## 2. volatile 关键字
 
-我们先要从 **CPU 缓存模型** 说起！
-
 ### 2.1. CPU 缓存模型
 
-**为什么要弄一个 CPU 高速缓存呢？**
-
-类比我们开发网站后台系统使用的缓存（比如 Redis）是为了解决程序处理速度和访问常规关系型数据库速度不对等的问题。 **CPU 缓存则是为了解决 CPU 处理速度和内存处理速度不对等的问题。**
-
-我们甚至可以把 **内存可以看作外存的高速缓存**，程序运行的时候我们把外存的数据复制到内存，由于内存的处理速度远远高于外存，这样提高了处理速度。
-
-总结：**CPU Cache 缓存的是内存数据用于解决 CPU 处理速度和内存不匹配的问题，内存缓存的是硬盘数据用于解决硬盘访问速度过慢的问题。**
+**CPU Cache 缓存的是内存数据用于解决 CPU 处理速度和内存不匹配的问题，内存缓存的是硬盘数据用于解决硬盘访问速度过慢的问题。**
 
 为了更好地理解，我画了一个简单的 CPU Cache 示意图如下（实际上，现代的 CPU Cache 通常分为三层，分别叫 L1,L2,L3 Cache）:
 
@@ -223,14 +124,6 @@ JDK1.6 对锁的实现引入了大量的优化，如偏向锁、轻量级锁、�
 2. **可见性** ：当一个线程对共享变量进行了修改，那么另外的线程都是立即可以看到修改后的最新值。`volatile` 关键字可以保证共享变量的可见性。
 3. **有序性** ：代码在执行的过程中的先后顺序，Java 在编译器以及运行期间的优化，代码的执行顺序未必就是编写代码时候的顺序。`volatile` 关键字可以禁止指令进行重排序优化。
 
-### 2.4. 说说 synchronized 关键字和 volatile 关键字的区别
-
-`synchronized` 关键字和 `volatile` 关键字是两个互补的存在，而不是对立的存在！
-
-- **`volatile` 关键字**是线程同步的**轻量级实现**，所以 **`volatile `性能肯定比` synchronized `关键字要好** 。但是 **`volatile` 关键字只能用于变量而 `synchronized` 关键字可以修饰方法以及代码块** 。
-- **`volatile` 关键字能保证数据的可见性，但不能保证数据的原子性。`synchronized` 关键字两者都能保证。**
-- **`volatile`关键字主要用于解决变量在多个线程之间的可见性，而 `synchronized` 关键字解决的是多个线程之间访问资源的同步性。**
-
 ## 3. ThreadLocal
 
 ### 3.1. ThreadLocal 简介
@@ -243,85 +136,7 @@ JDK1.6 对锁的实现引入了大量的优化，如偏向锁、轻量级锁、�
 
 比如有两个人去宝屋收集宝物，这两个共用一个袋子的话肯定会产生争执，但是给他们两个人每个人分配一个袋子的话就不会出现这样的问题。如果把这两个人比作线程的话，那么 ThreadLocal 就是用来避免这两个线程竞争的。
 
-### 3.2. ThreadLocal 示例
-
-相信看了上面的解释，大家已经搞懂 ThreadLocal 类是个什么东西了。
-
-```java
-import java.text.SimpleDateFormat;
-import java.util.Random;
-
-public class ThreadLocalExample implements Runnable{
-
-     // SimpleDateFormat 不是线程安全的，所以每个线程都要有自己独立的副本
-    private static final ThreadLocal<SimpleDateFormat> formatter = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyyMMdd HHmm"));
-
-    public static void main(String[] args) throws InterruptedException {
-        ThreadLocalExample obj = new ThreadLocalExample();
-        for(int i=0 ; i<10; i++){
-            Thread t = new Thread(obj, ""+i);
-            Thread.sleep(new Random().nextInt(1000));
-            t.start();
-        }
-    }
-
-    @Override
-    public void run() {
-        System.out.println("Thread Name= "+Thread.currentThread().getName()+" default Formatter = "+formatter.get().toPattern());
-        try {
-            Thread.sleep(new Random().nextInt(1000));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        //formatter pattern is changed here by thread, but it won't reflect to other threads
-        formatter.set(new SimpleDateFormat());
-
-        System.out.println("Thread Name= "+Thread.currentThread().getName()+" formatter = "+formatter.get().toPattern());
-    }
-
-}
-
-```
-
-Output:
-
-```
-Thread Name= 0 default Formatter = yyyyMMdd HHmm
-Thread Name= 0 formatter = yy-M-d ah:mm
-Thread Name= 1 default Formatter = yyyyMMdd HHmm
-Thread Name= 2 default Formatter = yyyyMMdd HHmm
-Thread Name= 1 formatter = yy-M-d ah:mm
-Thread Name= 3 default Formatter = yyyyMMdd HHmm
-Thread Name= 2 formatter = yy-M-d ah:mm
-Thread Name= 4 default Formatter = yyyyMMdd HHmm
-Thread Name= 3 formatter = yy-M-d ah:mm
-Thread Name= 4 formatter = yy-M-d ah:mm
-Thread Name= 5 default Formatter = yyyyMMdd HHmm
-Thread Name= 5 formatter = yy-M-d ah:mm
-Thread Name= 6 default Formatter = yyyyMMdd HHmm
-Thread Name= 6 formatter = yy-M-d ah:mm
-Thread Name= 7 default Formatter = yyyyMMdd HHmm
-Thread Name= 7 formatter = yy-M-d ah:mm
-Thread Name= 8 default Formatter = yyyyMMdd HHmm
-Thread Name= 9 default Formatter = yyyyMMdd HHmm
-Thread Name= 8 formatter = yy-M-d ah:mm
-Thread Name= 9 formatter = yy-M-d ah:mm
-```
-
-从输出中可以看出，Thread-0 已经改变了 formatter 的值，但仍然是 thread-2 默认格式化程序与初始化值相同，其他线程也一样。
-
-上面有一段代码用到了创建 `ThreadLocal` 变量的那段代码用到了 Java8 的知识，它等于下面这段代码，如果你写了下面这段代码的话，IDEA 会提示你转换为 Java8 的格式(IDEA 真的不错！)。因为 ThreadLocal 类在 Java 8 中扩展，使用一个新的方法`withInitial()`，将 Supplier 功能接口作为参数。
-
-```java
-private static final ThreadLocal<SimpleDateFormat> formatter = new ThreadLocal<SimpleDateFormat>(){
-    @Override
-    protected SimpleDateFormat initialValue(){
-        return new SimpleDateFormat("yyyyMMdd HHmm");
-    }
-};
-```
-
-### 3.3. ThreadLocal 原理
+### 3.2. ThreadLocal 原理
 
 从 `Thread`类源代码入手。
 
@@ -366,14 +181,9 @@ ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
 ```
 
 比如我们在同一个线程中声明了两个 `ThreadLocal` 对象的话，会使用 `Thread`内部都是使用仅有那个`ThreadLocalMap` 存放数据的，`ThreadLocalMap`的 key 就是 `ThreadLocal`对象，value 就是 `ThreadLocal` 对象调用`set`方法设置的值。
-
-![ThreadLocal数据结构](images/threadlocal数据结构.png)
-
 `ThreadLocalMap`是`ThreadLocal`的静态内部类。
 
-![ThreadLocal内部类](images/ThreadLocal内部类.png)
-
-### 3.4. ThreadLocal 内存泄露问题
+### 3.3. ThreadLocal 内存泄露问题
 
 `ThreadLocalMap` 中使用的 key 为 `ThreadLocal` 的弱引用,而 value 是强引用。所以，如果 `ThreadLocal` 没有被外部强引用的情况下，在垃圾回收的时候，key 会被清理掉，而 value 不会被清理掉。这样一来，`ThreadLocalMap` 中就会出现 key 为 null 的 Entry。假如我们不做任何措施的话，value 永远无法被 GC 回收，这个时候就可能会产生内存泄露。ThreadLocalMap 实现中已经考虑了这种情况，在调用 `set()`、`get()`、`remove()` 方法的时候，会清理掉 key 为 null 的记录。使用完 `ThreadLocal`方法后 最好手动调用`remove()`方法
 
@@ -409,96 +219,7 @@ static class Entry extends WeakReference<ThreadLocal<?>> {
 - **提高响应速度**。当任务到达时，任务可以不需要等到线程创建就能立即执行。
 - **提高线程的可管理性**。线程是稀缺资源，如果无限制的创建，不仅会消耗系统资源，还会降低系统的稳定性，使用线程池可以进行统一的分配，调优和监控。
 
-### 4.2. 实现 Runnable 接口和 Callable 接口的区别
-
-`Runnable`自 Java 1.0 以来一直存在，但`Callable`仅在 Java 1.5 中引入,目的就是为了来处理`Runnable`不支持的用例。**`Runnable` 接口** 不会返回结果或抛出检查异常，但是 **`Callable` 接口** 可以。所以，如果任务不需要返回结果或抛出异常推荐使用 **`Runnable` 接口** ，这样代码看起来会更加简洁。
-
-工具类 `Executors` 可以实现将 `Runnable` 对象转换成 `Callable` 对象。（`Executors.callable(Runnable task)` 或 `Executors.callable(Runnable task, Object result)`）。
-
-`Runnable.java`
-
-```java
-@FunctionalInterface
-public interface Runnable {
-   /**
-    * 被线程执行，没有返回值也无法抛出异常
-    */
-    public abstract void run();
-}
-```
-
-`Callable.java`
-
-```java
-@FunctionalInterface
-public interface Callable<V> {
-    /**
-     * 计算结果，或在无法这样做时抛出异常。
-     * @return 计算得出的结果
-     * @throws 如果无法计算结果，则抛出异常
-     */
-    V call() throws Exception;
-}
-```
-
-### 4.3. 执行 execute()方法和 submit()方法的区别是什么呢？
-
-1. **`execute()`方法用于提交不需要返回值的任务，所以无法判断任务是否被线程池执行成功与否；**
-2. **`submit()`方法用于提交需要返回值的任务。线程池会返回一个 `Future` 类型的对象，通过这个 `Future` 对象可以判断任务是否执行成功**，并且可以通过 `Future` 的 `get()`方法来获取返回值，`get()`方法会阻塞当前线程直到任务完成，而使用 `get(long timeout，TimeUnit unit)`方法则会阻塞当前线程一段时间后立即返回，这时候有可能任务没有执行完。
-
-我们以 **`AbstractExecutorService` 接口** 中的一个 `submit` 方法为例子来看看源代码：
-
-```java
-public Future<?> submit(Runnable task) {
-    if (task == null) throw new NullPointerException();
-    RunnableFuture<Void> ftask = newTaskFor(task, null);
-    execute(ftask);
-    return ftask;
-}
-```
-
-上面方法调用的 `newTaskFor` 方法返回了一个 `FutureTask` 对象。
-
-```java
-protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
-    return new FutureTask<T>(runnable, value);
-}
-```
-
-我们再来看看`execute()`方法：
-
-```java
-public void execute(Runnable command) {
-  ...
-}
-```
-
-### 4.4. 如何创建线程池
-
-《阿里巴巴 Java 开发手册》中强制线程池不允许使用 Executors 去创建，而是通过 ThreadPoolExecutor 的方式，这样的处理方式让写的同学更加明确线程池的运行规则，规避资源耗尽的风险
-
-> Executors 返回线程池对象的弊端如下：
->
-> - **FixedThreadPool 和 SingleThreadExecutor** ： 允许请求的队列长度为 Integer.MAX_VALUE ，可能堆积大量的请求，从而导致 OOM。
-> - **CachedThreadPool 和 ScheduledThreadPool** ： 允许创建的线程数量为 Integer.MAX_VALUE ，可能会创建大量线程，从而导致 OOM。
-
-**方式一：通过构造方法实现**
-
-![ThreadPoolExecutor构造方法](https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-6/ThreadPoolExecutor构造方法.png)
-
-**方式二：通过 Executor 框架的工具类 Executors 来实现**
-
-我们可以创建三种类型的 ThreadPoolExecutor：
-
-- **FixedThreadPool** ： 该方法返回一个固定线程数量的线程池。该线程池中的线程数量始终不变。当有一个新的任务提交时，线程池中若有空闲线程，则立即执行。若没有，则新的任务会被暂存在一个任务队列中，待有线程空闲时，便处理在任务队列中的任务。
-- **SingleThreadExecutor：** 方法返回一个只有一个线程的线程池。若多余一个任务被提交到该线程池，任务会被保存在一个任务队列中，待线程空闲，按先入先出的顺序执行队列中的任务。
-- **CachedThreadPool：** 该方法返回一个可根据实际情况调整线程数量的线程池。线程池的线程数量不确定，但若有空闲线程可以复用，则会优先使用可复用的线程。若所有线程均在工作，又有新的任务提交，则会创建新的线程处理任务。所有线程在当前任务执行完毕后，将返回线程池进行复用。
-
-对应 Executors 工具类中的方法如图所示：
-
-![Executor框架的工具类](https://my-blog-to-use.oss-cn-beijing.aliyuncs.com/2019-6/Executor框架的工具类.png)
-
-### 4.5 ThreadPoolExecutor 类分析
+### 4.2 ThreadPoolExecutor 类分析
 
 `ThreadPoolExecutor` 类中提供的四个构造方法。我们来看最长的那个，其余三个都是在这个构造方法的基础上产生（其他几个构造方法说白点都是给定某些默认参数的构造方法比如默认制定拒绝策略是什么），这里就不贴代码讲了，比较简单。
 
@@ -531,7 +252,7 @@ public ThreadPoolExecutor(int corePoolSize,
 
 **下面这些对创建 非常重要，在后面使用线程池的过程中你一定会用到！所以，务必拿着小本本记清楚。**
 
-#### 4.5.1 `ThreadPoolExecutor`构造函数重要参数分析
+#### 4.4.1 `ThreadPoolExecutor`构造函数重要参数分析
 
 **`ThreadPoolExecutor` 3 个最重要的参数：**
 
@@ -546,198 +267,264 @@ public ThreadPoolExecutor(int corePoolSize,
 3. **`threadFactory`** :executor 创建新线程的时候会用到。
 4. **`handler`** :饱和策略。关于饱和策略下面单独介绍一下。
 
-#### 4.5.2 `ThreadPoolExecutor` 饱和策略
-
-**`ThreadPoolExecutor` 饱和策略定义:**
-
-如果当前同时运行的线程数量达到最大线程数量并且队列也已经被放满了任务时，`ThreadPoolTaskExecutor` 定义一些策略:
-
-- **`ThreadPoolExecutor.AbortPolicy`：** 抛出 `RejectedExecutionException`来拒绝新任务的处理。
-- **`ThreadPoolExecutor.CallerRunsPolicy`：** 调用执行自己的线程运行任务，也就是直接在调用`execute`方法的线程中运行(`run`)被拒绝的任务，如果执行程序已关闭，则会丢弃该任务。因此这种策略会降低对于新任务提交速度，影响程序的整体性能。如果您的应用程序可以承受此延迟并且你要求任何一个任务请求都要被执行的话，你可以选择这个策略。
-- **`ThreadPoolExecutor.DiscardPolicy`：** 不处理新任务，直接丢弃掉。
-- **`ThreadPoolExecutor.DiscardOldestPolicy`：** 此策略将丢弃最早的未处理的任务请求。
-
-举个例子： Spring 通过 `ThreadPoolTaskExecutor` 或者我们直接通过 `ThreadPoolExecutor` 的构造函数创建线程池的时候，当我们不指定 `RejectedExecutionHandler` 饱和策略的话来配置线程池的时候默认使用的是 `ThreadPoolExecutor.AbortPolicy`。在默认情况下，`ThreadPoolExecutor` 将抛出 `RejectedExecutionException` 来拒绝新来的任务 ，这代表你将丢失对这个任务的处理。 对于可伸缩的应用程序，建议使用 `ThreadPoolExecutor.CallerRunsPolicy`。当最大池被填满时，此策略为我们提供可伸缩队列。（这个直接查看 `ThreadPoolExecutor` 的构造函数源码就可以看出，比较简单的原因，这里就不贴代码了）
-
-### 4.6 一个简单的线程池 Demo
-
-为了让大家更清楚上面的面试题中的一些概念，我写了一个简单的线程池 Demo。
-
-首先创建一个 `Runnable` 接口的实现类（当然也可以是 `Callable` 接口，我们上面也说了两者的区别。）
-
-`MyRunnable.java`
-
+#### 4.4.2 合理配置线程池
+计算密集型：CPU核心数+1
+IO密集型：
+	CPU核心数*2
+	CPU核心数/(1-阻塞系数[0.8-0.9])
+	
+### 4.3 自定义线程池
+核心实现
 ```java
-import java.util.Date;
+package com.company.juc;
+
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class MyThreadPool {
+    // 任务队列
+    private final WorkerQueue<Runnable> workerQueue;
+    // 线程集合
+    private final int coreSize;
+    private final Set<Worker> workers = Collections.synchronizedSet(new HashSet<>());
+
+    private final long timeout;
+    private final TimeUnit timeUnit;
+    private final RejectPolicy<Runnable> rejectPolicy;
+
+    private static final Logger LOGGER = Logger.getGlobal();
+
+    /**
+     * 初始化线程池
+     *
+     * @param coreSize 核心线程数
+     * @param timeout  超时阈值
+     * @param timeUnit 时间单位
+     * @param capacity 队列容量
+     * @param policy   拒绝策略
+     */
+    public MyThreadPool(int coreSize, long timeout, TimeUnit timeUnit, int capacity, RejectPolicy<Runnable> policy) {
+        this.coreSize = coreSize;
+        this.timeout = timeout;
+        this.timeUnit = timeUnit;
+        workerQueue = new BlockingQueue<>(capacity);
+        this.rejectPolicy = policy;
+    }
+
+    /**
+     * 提交到池中
+     *
+     * @param task 线程任务
+     */
+    public void execute(Runnable task) {
+        if (task == null) throw new NullPointerException();
+        if (workers.size() < coreSize) {
+            Worker worker = new Worker(task);
+            Thread thread = new Thread(worker);
+            LOGGER.log(Level.INFO, "新增worker\t{0}", worker);
+            thread.start();
+            workers.add(worker);
+        } else {
+            rejectPolicy.reject(workerQueue, task);
+        }
+    }
+
+    /**
+     * 工作线程
+     * 负责任务队列的消费
+     */
+    class Worker implements Runnable {
+        private Runnable task;
+
+        public Worker(Runnable task) {
+            this.task = task;
+        }
+
+        @Override
+        public void run() {
+            while (task != null || (task = workerQueue.take(timeout, timeUnit)) != null) {
+                task.run();
+                task = null;
+            }
+            LOGGER.log(Level.INFO, "移除work\t{0}", this);
+            workers.remove(this);
+        }
+    }
+
+}
 
 /**
- * 这是一个简单的Runnable类，需要大约5秒钟来执行其任务。
- * @author shuang.kou
+ * 工作队列
+ *
+ * @param <T>
  */
-public class MyRunnable implements Runnable {
+interface WorkerQueue<T> {
+    void put(T task);
 
-    private String command;
+    void put(T task, long timeout, TimeUnit timeUnit);
 
-    public MyRunnable(String s) {
-        this.command = s;
+    T take();
+
+    T take(long timeout, TimeUnit timeUnit);
+}
+
+/**
+ * 拒绝策略
+ *
+ * @param <T>
+ */
+@FunctionalInterface
+interface RejectPolicy<T> {
+    void reject(WorkerQueue<T> taskQueue, T task);
+}
+
+/**
+ * 任务队列的实现
+ * 提供入队、出队方法
+ *
+ * @param <T>
+ */
+class BlockingQueue<T> implements WorkerQueue<T> {
+    private static final Logger LOGGER = Logger.getGlobal();
+    // 任务队列
+    private final Queue<T> queue;
+    // 队列容量
+    private final int capacity;
+
+    // 锁
+    private final Lock lock = new ReentrantLock();
+    private final Condition condition = lock.newCondition();
+
+    public BlockingQueue(int capacity) {
+        this.capacity = capacity;
+        this.queue = new ArrayDeque<>(capacity);
     }
 
     @Override
-    public void run() {
-        System.out.println(Thread.currentThread().getName() + " Start. Time = " + new Date());
-        processCommand();
-        System.out.println(Thread.currentThread().getName() + " End. Time = " + new Date());
-    }
-
-    private void processCommand() {
+    public void put(T task) {
+        lock.lock();
         try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
+            while (queue.size() == capacity) {
+                LOGGER.log(Level.WARNING, "等待入队\t{0}", task);
+                condition.await();
+            }
+            condition.signal();
+            queue.offer(task);
+            LOGGER.log(Level.INFO, "成功入队\t{0}", task);
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
-    public String toString() {
-        return this.command;
+    public void put(T task, long timeout, TimeUnit timeUnit) {
+        lock.lock();
+        try {
+            long nanos = timeUnit.toNanos(timeout);
+            while (queue.size() == capacity) {
+                if (nanos <= 0) return;
+                LOGGER.log(Level.WARNING, "等待入队\t{0}", task);
+                nanos = condition.awaitNanos(nanos);
+            }
+            condition.signal();
+            queue.offer(task);
+            LOGGER.log(Level.INFO, "成功入队\t{0}", task);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public T take() {
+        lock.lock();
+        try {
+            while (queue.isEmpty()) {
+                condition.await();
+            }
+            condition.signal();
+            T poll = queue.poll();
+            LOGGER.log(Level.INFO, "成功出队\t{0}", poll);
+            return poll;
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+        return null;
+    }
+
+    @Override
+    public T take(long timeout, TimeUnit timeUnit) {
+        lock.lock();
+        try {
+            long nanos = timeUnit.toNanos(timeout);
+            while (queue.isEmpty()) {
+                if (nanos <= 0) return null;
+                nanos = condition.awaitNanos(nanos);
+            }
+            condition.signal();
+            T poll = queue.poll();
+            LOGGER.log(Level.INFO, "成功出队\t{0}", poll);
+            return poll;
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+        return null;
     }
 }
 
 ```
-
-编写测试程序，我们这里以阿里巴巴推荐的使用 `ThreadPoolExecutor` 构造函数自定义参数的方式来创建线程池。
-
-`ThreadPoolExecutorDemo.java`
-
 ```java
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
+package com.company.juc;
+
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
-public class ThreadPoolExecutorDemo {
+public class MyThreadPoolDemo {
 
-    private static final int CORE_POOL_SIZE = 5;
-    private static final int MAX_POOL_SIZE = 10;
-    private static final int QUEUE_CAPACITY = 100;
-    private static final Long KEEP_ALIVE_TIME = 1L;
     public static void main(String[] args) {
+        // 初始化线程池
+        MyThreadPool threadPool = new MyThreadPool(3, 1_000, TimeUnit.MILLISECONDS,
+                1, WorkerQueue::put);
 
-        //使用阿里巴巴推荐的创建线程池的方式
-        //通过ThreadPoolExecutor构造函数自定义参数创建
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(
-                CORE_POOL_SIZE,
-                MAX_POOL_SIZE,
-                KEEP_ALIVE_TIME,
-                TimeUnit.SECONDS,
-                new ArrayBlockingQueue<>(QUEUE_CAPACITY),
-                new ThreadPoolExecutor.CallerRunsPolicy());
-
-        for (int i = 0; i < 10; i++) {
-            //创建WorkerThread对象（WorkerThread类实现了Runnable 接口）
-            Runnable worker = new MyRunnable("" + i);
-            //执行Runnable
-            executor.execute(worker);
-        }
-        //终止线程池
-        executor.shutdown();
-        while (!executor.isTerminated()) {
-        }
-        System.out.println("Finished all threads");
+        // 提交到线程池
+        IntStream.range(0, 5).forEach((i) -> threadPool.execute(
+                () -> {
+                    System.out.printf("当前线程：%s\t%s\n",
+                            Thread.currentThread().getName(), i + 1);
+                    try {
+                        Thread.sleep(new Random().nextInt(1_000));
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                })
+        );
     }
+
+//    static void test() {
+//        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, 2,
+//                10_000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(10),
+//                Executors.defaultThreadFactory(), new ThreadPoolExecutor.DiscardOldestPolicy());
+//        IntStream.range(0, 30).forEach(
+//                (i) -> threadPoolExecutor.execute(() ->
+//                        System.out.printf("hello world %s %s\n", i + 1, Thread.currentThread().getName())
+//                ));
+//        threadPoolExecutor.shutdown();
+//    }
 }
 ```
-
-可以看到我们上面的代码指定了：
-
-1. `corePoolSize`: 核心线程数为 5。
-2. `maximumPoolSize` ：最大线程数 10
-3. `keepAliveTime` : 等待时间为 1L。
-4. `unit`: 等待时间的单位为 TimeUnit.SECONDS。
-5. `workQueue`：任务队列为 `ArrayBlockingQueue`，并且容量为 100;
-6. `handler`:饱和策略为 `CallerRunsPolicy`。
-
-**Output：**
-
-```
-pool-1-thread-3 Start. Time = Sun Apr 12 11:14:37 CST 2020
-pool-1-thread-5 Start. Time = Sun Apr 12 11:14:37 CST 2020
-pool-1-thread-2 Start. Time = Sun Apr 12 11:14:37 CST 2020
-pool-1-thread-1 Start. Time = Sun Apr 12 11:14:37 CST 2020
-pool-1-thread-4 Start. Time = Sun Apr 12 11:14:37 CST 2020
-pool-1-thread-3 End. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-4 End. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-1 End. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-5 End. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-1 Start. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-2 End. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-5 Start. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-4 Start. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-3 Start. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-2 Start. Time = Sun Apr 12 11:14:42 CST 2020
-pool-1-thread-1 End. Time = Sun Apr 12 11:14:47 CST 2020
-pool-1-thread-4 End. Time = Sun Apr 12 11:14:47 CST 2020
-pool-1-thread-5 End. Time = Sun Apr 12 11:14:47 CST 2020
-pool-1-thread-3 End. Time = Sun Apr 12 11:14:47 CST 2020
-pool-1-thread-2 End. Time = Sun Apr 12 11:14:47 CST 2020
-
-```
-
-### 4.7 线程池原理分析
-
-承接 4.6 节，我们通过代码输出结果可以看出：**线程池首先会先执行 5 个任务，然后这些任务有任务被执行完的话，就会去拿新的任务执行。** 大家可以先通过上面讲解的内容，分析一下到底是咋回事？（自己独立思考一会）
-
-现在，我们就分析上面的输出内容来简单分析一下线程池原理。
-
-**为了搞懂线程池的原理，我们需要首先分析一下 `execute`方法。** 在 4.6 节中的 Demo 中我们使用 `executor.execute(worker)`来提交一个任务到线程池中去，这个方法非常重要，下面我们来看看它的源码：
-
-```java
-// 存放线程池的运行状态 (runState) 和线程池内有效线程的数量 (workerCount)
-private final AtomicInteger ctl = new AtomicInteger(ctlOf(RUNNING, 0));
-
-private static int workerCountOf(int c) {
-    return c & CAPACITY;
-}
-
-private final BlockingQueue<Runnable> workQueue;
-
-public void execute(Runnable command) {
-    // 如果任务为null，则抛出异常。
-    if (command == null)
-        throw new NullPointerException();
-    // ctl 中保存的线程池当前的一些状态信息
-    int c = ctl.get();
-
-    //  下面会涉及到 3 步 操作
-    // 1.首先判断当前线程池中执行的任务数量是否小于 corePoolSize
-    // 如果小于的话，通过addWorker(command, true)新建一个线程，并将任务(command)添加到该线程中；然后，启动该线程从而执行任务。
-    if (workerCountOf(c) < corePoolSize) {
-        if (addWorker(command, true))
-            return;
-        c = ctl.get();
-    }
-    // 2.如果当前执行的任务数量大于等于 corePoolSize 的时候就会走到这里
-    // 通过 isRunning 方法判断线程池状态，线程池处于 RUNNING 状态才会被并且队列可以加入任务，该任务才会被加入进去
-    if (isRunning(c) && workQueue.offer(command)) {
-        int recheck = ctl.get();
-        // 再次获取线程池状态，如果线程池状态不是 RUNNING 状态就需要从任务队列中移除任务，并尝试判断线程是否全部执行完毕。同时执行拒绝策略。
-        if (!isRunning(recheck) && remove(command))
-            reject(command);
-            // 如果当前线程池为空就新创建一个线程并执行。
-        else if (workerCountOf(recheck) == 0)
-            addWorker(null, false);
-    }
-    //3. 通过addWorker(command, false)新建一个线程，并将任务(command)添加到该线程中；然后，启动该线程从而执行任务。
-    //如果addWorker(command, false)执行失败，则通过reject()执行相应的拒绝策略的内容。
-    else if (!addWorker(command, false))
-        reject(command);
-}
-```
-
-现在，让我们在回到 4.6 节我们写的 Demo， 现在是不是很容易就可以搞懂它的原理了呢？
-
-没搞懂的话，也没关系，可以看看我的分析：
-
-> 我们在代码中模拟了 10 个任务，我们配置的核心线程数为 5 、等待队列容量为 100 ，所以每次只可能存在 5 个任务同时执行，剩下的 5 个任务会被放到等待队列中去。当前的5个任务中如果有任务被执行完了，线程池就会去拿新的任务执行。
 
 ## 5. Atomic 原子类
 
@@ -781,40 +568,7 @@ public void execute(Runnable command) {
 - `AtomicLongFieldUpdater`：原子更新长整形字段的更新器
 - `AtomicReferenceFieldUpdater`：原子更新引用类型字段的更新器
 
-### 5.3. 讲讲 AtomicInteger 的使用
-
-**AtomicInteger 类常用方法**
-
-```java
-public final int get() //获取当前的值
-public final int getAndSet(int newValue)//获取当前的值，并设置新的值
-public final int getAndIncrement()//获取当前的值，并自增
-public final int getAndDecrement() //获取当前的值，并自减
-public final int getAndAdd(int delta) //获取当前的值，并加上预期的值
-boolean compareAndSet(int expect, int update) //如果输入的数值等于预期值，则以原子方式将该值设置为输入值（update）
-public final void lazySet(int newValue)//最终设置为newValue,使用 lazySet 设置之后可能导致其他线程在之后的一小段时间内还是可以读到旧的值。
-```
-
-**AtomicInteger 类的使用示例**
-
-使用 AtomicInteger 之后，不用对 increment() 方法加锁也可以保证线程安全。
-
-```java
-class AtomicIntegerTest {
-    private AtomicInteger count = new AtomicInteger();
-    //使用AtomicInteger之后，不需要对该方法加锁，也可以实现线程安全。
-    public void increment() {
-        count.incrementAndGet();
-    }
-
-    public int getCount() {
-        return count.get();
-    }
-}
-
-```
-
-### 5.4. 能不能给我简单介绍一下 AtomicInteger 类的原理
+### 5.3. 能不能给我简单介绍一下 AtomicInteger 类的原理
 
 AtomicInteger 线程安全原理简单分析
 
@@ -853,7 +607,7 @@ AQS 是一个用来构建锁和同步器的框架，使用 AQS 能简单且高�
 
 ### 6.2. AQS 原理分析
 
-AQS 原理这部分参考了部分博客，在 5.2 节末尾放了链接。
+AQS 原理这部分参考了部分博客，在 6.2 节末尾放了链接。
 
 > 在面试中被问到并发知识的时候，大多都会被问到“请你说一下自己对于 AQS 原理的理解”。下面给大家一个示例供大家参加，面试不是背题，大家一定要加入自己的思想，即使加入不了自己的思想也要保证自己能够通俗的讲出来而不是背出来。
 
@@ -1025,12 +779,3 @@ CompletableFuture<Void> allFutures = CompletableFuture.allOf(
 );
 
 ```
-
-## 7 Reference
-
-- 《深入理解 Java 虚拟机》
-- 《实战 Java 高并发程序设计》
-- 《Java 并发编程的艺术》
-- https://www.cnblogs.com/waterystone/p/4920797.html
-- https://www.cnblogs.com/chengxiao/archive/2017/07/24/7141160.html
-- <https://www.journaldev.com/1076/java-threadlocal-example>
