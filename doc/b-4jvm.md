@@ -31,7 +31,6 @@ Java 虚拟机在执行 Java 程序的过程中会把它管理的内存划分成
 **JDK1.7及之后版本的 JVM 已经将运行时常量池从方法区中移了出来，在 Java 堆（Heap）中开辟了一块区域存放运行时常量池。** 
 
 ![](https://images.xiaozhuanlan.com/photo/2019/02276bcccbe181985ac50af2668940c9.jpg)
-——图片来源：https://blog.csdn.net/wangbiao007/article/details/78545189
 
 #### 直接内存
 
@@ -198,8 +197,6 @@ G1收集器的运作大致分为以下几个步骤：
 
 #### 知道类加载的过程吗？
 
-类加载过程：**加载->连接->初始化**。连接过程又可分为三步:**验证->准备->解析**。
-
 ![类加载过程](https://images.xiaozhuanlan.com/photo/2019/81744a8cfb9eb03f57c3915bdba9a9e6.png)
 
 #### 知道哪些类加载器?
@@ -210,11 +207,11 @@ JVM 中内置了三个重要的 ClassLoader，除了 BootstrapClassLoader 其他
 2. **ExtensionClassLoader(扩展类加载器)** ：主要负责加载目录 `%JRE_HOME%/lib/ext` 目录下的jar包和类，或被 `java.ext.dirs` 系统变量所指定的路径下的jar包。
 3. **AppClassLoader(应用程序类加载器)** :面向我们用户的加载器，负责加载当前应用classpath下的所有jar包和类。
 
-#### 双亲委派模型知道吗？能介绍一下吗?
+#### 双亲委派模型知道吗？
 
 ![ClassLoader](https://images.xiaozhuanlan.com/photo/2019/80f3af661a8724c4dee84411c166c03d.png)
 
-##### 双亲委派模型实现源码分析
+##### 实现源码分析
 
 双亲委派模型的实现代码非常简单，逻辑非常清晰，都集中在 `java.lang.ClassLoader` 的 `loadClass()` 中，相关代码如下所示。
 
@@ -256,15 +253,3 @@ protected Class<?> loadClass(String name, boolean resolve)
         }
     }
 ```
-
-##### 双亲委派模型带来了什么好处呢？
-
-双亲委派模型保证了Java程序的稳定运行，可以避免类的重复加载（JVM 区分不同类的方式不仅仅根据类名，相同的类文件被不同的类加载器加载产生的是两个不同的类），也保证了 Java 的核心 API 不被篡改。如果不用没有使用双亲委派模型，而是每个类加载器加载自己的话就会出现一些问题，比如我们编写一个称为 `java.lang.Object` 类的话，那么程序运行的时候，系统就会出现多个不同的 `Object` 类。
-
-##### 如果我们不想用双亲委派模型怎么办？
-
-为了避免双亲委托机制，我们可以自己定义一个类加载器，然后重载 `loadClass()` 即可。
-
-##### 如何自定义类加载器?
-
-除了 `BootstrapClassLoader` 其他类加载器均由 Java 实现且全部继承自`java.lang.ClassLoader`。如果我们要自定义自己的类加载器，很明显需要继承 `ClassLoader`。
