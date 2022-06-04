@@ -11349,7 +11349,7 @@ LOCATION '/warehouse/gmall/ads/ads_repeat_purchase/';
 
 **第二步：分别统计购买次数大于1的人数和大于2的人数。**
 
-```shell
+```sql
 insert overwrite table ads_repeat_purchase
 select * from ads_repeat_purchase
 union
@@ -11417,7 +11417,7 @@ LOCATION '/warehouse/gmall/ads/ads_order_total/';
 
 **数据装载**
 
-```shell
+```sql
 insert overwrite table ads_order_total
 select * from ads_order_total
 union
@@ -11471,7 +11471,7 @@ LOCATION '/warehouse/gmall/ads/ads_order_by_province/';
 
 **数据装载**
 
-```shell
+```sql
 insert overwrite table ads_order_by_province
 select * from ads_order_by_province
 union
@@ -11547,7 +11547,7 @@ LOCATION '/warehouse/gmall/ads/ads_coupon_stats/';
 
 **数据装载**
 
-```shell
+```sql
 insert overwrite table ads_coupon_stats
 select * from ads_coupon_stats
 union
@@ -11623,7 +11623,7 @@ LOCATION '/warehouse/gmall/ads/ads_activity_stats/';
 
 **数据装载**
 
-```shell
+```sql
 insert overwrite table ads_activity_stats
 select * from ads_activity_stats
 union
