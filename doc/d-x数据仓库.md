@@ -6185,3 +6185,6124 @@ chmod +x bin/ods_to_dwd_db.sh
 执行脚本
 
 ods_to_dwd_db_init.sh all 2020-06-15
+
+### DWS层
+
+#### 访客主题
+#### 用户主题
+#### 商品主题
+#### 优惠券主题
+#### 活动主题
+#### 地区主题
+
+**建表语句**
+
+```sql
+-- 访客
+DROP TABLE IF EXISTS dws_visitor_action_daycount;
+CREATE EXTERNAL TABLE dws_visitor_action_daycount
+(
+    `mid_id` STRING COMMENT '设备id',
+    `brand` STRING COMMENT '设备品牌',
+    `model` STRING COMMENT '设备型号',
+    `is_new` STRING COMMENT '是否首次访问',
+    `channel` ARRAY<STRING> COMMENT '渠道',
+    `os` ARRAY<STRING> COMMENT '操作系统',
+    `area_code` ARRAY<STRING> COMMENT '地区ID',
+    `version_code` ARRAY<STRING> COMMENT '应用版本',
+    `visit_count` BIGINT COMMENT '访问次数',
+    `page_stats` ARRAY<STRUCT<page_id:STRING,page_count:BIGINT,during_time:BIGINT>> COMMENT '页面访问统计'
+) COMMENT '每日设备行为表'
+PARTITIONED BY(`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dws/dws_visitor_action_daycount'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 用户
+DROP TABLE IF EXISTS dws_user_action_daycount;
+CREATE EXTERNAL TABLE dws_user_action_daycount
+(
+    `user_id` STRING COMMENT '用户id',
+    `login_count` BIGINT COMMENT '登录次数',
+    `cart_count` BIGINT COMMENT '加入购物车次数',
+    `favor_count` BIGINT COMMENT '收藏次数',
+    `order_count` BIGINT COMMENT '下单次数',
+    `order_activity_count` BIGINT COMMENT '订单参与活动次数',
+    `order_activity_reduce_amount` DECIMAL(16,2) COMMENT '订单减免金额(活动)',
+    `order_coupon_count` BIGINT COMMENT '订单用券次数',
+    `order_coupon_reduce_amount` DECIMAL(16,2) COMMENT '订单减免金额(优惠券)',
+    `order_original_amount` DECIMAL(16,2)  COMMENT '订单单原始金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '订单总金额',
+    `payment_count` BIGINT COMMENT '支付次数',
+    `payment_amount` DECIMAL(16,2) COMMENT '支付金额',
+    `refund_order_count` BIGINT COMMENT '退单次数',
+    `refund_order_num` BIGINT COMMENT '退单件数',
+    `refund_order_amount` DECIMAL(16,2) COMMENT '退单金额',
+    `refund_payment_count` BIGINT COMMENT '退款次数',
+    `refund_payment_num` BIGINT COMMENT '退款件数',
+    `refund_payment_amount` DECIMAL(16,2) COMMENT '退款金额',
+    `coupon_get_count` BIGINT COMMENT '优惠券领取次数',
+    `coupon_using_count` BIGINT COMMENT '优惠券使用(下单)次数',
+    `coupon_used_count` BIGINT COMMENT '优惠券使用(支付)次数',
+    `appraise_good_count` BIGINT COMMENT '好评数',
+    `appraise_mid_count` BIGINT COMMENT '中评数',
+    `appraise_bad_count` BIGINT COMMENT '差评数',
+    `appraise_default_count` BIGINT COMMENT '默认评价数',
+    `order_detail_stats` array<struct<sku_id:string,sku_num:bigint,order_count:bigint,activity_reduce_amount:decimal(16,2),coupon_reduce_amount:decimal(16,2),original_amount:decimal(16,2),final_amount:decimal(16,2)>> COMMENT '下单明细统计'
+) COMMENT '每日用户行为'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dws/dws_user_action_daycount/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 商品主题
+DROP TABLE IF EXISTS dws_sku_action_daycount;
+CREATE EXTERNAL TABLE dws_sku_action_daycount
+(
+    `sku_id` STRING COMMENT 'sku_id',
+    `order_count` BIGINT COMMENT '被下单次数',
+    `order_num` BIGINT COMMENT '被下单件数',
+    `order_activity_count` BIGINT COMMENT '参与活动被下单次数',
+    `order_coupon_count` BIGINT COMMENT '使用优惠券被下单次数',
+    `order_activity_reduce_amount` DECIMAL(16,2) COMMENT '优惠金额(活动)',
+    `order_coupon_reduce_amount` DECIMAL(16,2) COMMENT '优惠金额(优惠券)',
+    `order_original_amount` DECIMAL(16,2) COMMENT '被下单原价金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '被下单最终金额',
+    `payment_count` BIGINT COMMENT '被支付次数',
+    `payment_num` BIGINT COMMENT '被支付件数',
+    `payment_amount` DECIMAL(16,2) COMMENT '被支付金额',
+    `refund_order_count` BIGINT  COMMENT '被退单次数',
+    `refund_order_num` BIGINT COMMENT '被退单件数',
+    `refund_order_amount` DECIMAL(16,2) COMMENT '被退单金额',
+    `refund_payment_count` BIGINT  COMMENT '被退款次数',
+    `refund_payment_num` BIGINT COMMENT '被退款件数',
+    `refund_payment_amount` DECIMAL(16,2) COMMENT '被退款金额',
+    `cart_count` BIGINT COMMENT '被加入购物车次数',
+    `favor_count` BIGINT COMMENT '被收藏次数',
+    `appraise_good_count` BIGINT COMMENT '好评数',
+    `appraise_mid_count` BIGINT COMMENT '中评数',
+    `appraise_bad_count` BIGINT COMMENT '差评数',
+    `appraise_default_count` BIGINT COMMENT '默认评价数'
+) COMMENT '每日商品行为'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dws/dws_sku_action_daycount/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 优惠券
+DROP TABLE IF EXISTS dws_coupon_info_daycount;
+CREATE EXTERNAL TABLE dws_coupon_info_daycount(
+    `coupon_id` STRING COMMENT '优惠券ID',
+    `get_count` BIGINT COMMENT '被领取次数',
+    `order_count` BIGINT COMMENT '被使用(下单)次数', 
+    `order_reduce_amount` DECIMAL(16,2) COMMENT '用券下单优惠金额',
+    `order_original_amount` DECIMAL(16,2) COMMENT '用券订单原价金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '用券下单最终金额',
+    `payment_count` BIGINT COMMENT '被使用(支付)次数',
+    `payment_reduce_amount` DECIMAL(16,2) COMMENT '用券支付优惠金额',
+    `payment_amount` DECIMAL(16,2) COMMENT '用券支付总金额',
+    `expire_count` BIGINT COMMENT '过期次数'
+) COMMENT '每日活动统计'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dws/dws_coupon_info_daycount/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 活动
+DROP TABLE IF EXISTS dws_activity_info_daycount;
+CREATE EXTERNAL TABLE dws_activity_info_daycount(
+    `activity_rule_id` STRING COMMENT '活动规则ID',
+    `activity_id` STRING COMMENT '活动ID',
+    `order_count` BIGINT COMMENT '参与某活动某规则下单次数',
+    `order_reduce_amount` DECIMAL(16,2) COMMENT '参与某活动某规则下单减免金额',
+    `order_original_amount` DECIMAL(16,2) COMMENT '参与某活动某规则下单原始金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '参与某活动某规则下单最终金额',
+    `payment_count` BIGINT COMMENT '参与某活动某规则支付次数',
+    `payment_reduce_amount` DECIMAL(16,2) COMMENT '参与某活动某规则支付减免金额',
+    `payment_amount` DECIMAL(16,2) COMMENT '参与某活动某规则支付金额'
+) COMMENT '每日活动统计'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dws/dws_activity_info_daycount/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 地区
+DROP TABLE IF EXISTS dws_area_stats_daycount;
+CREATE EXTERNAL TABLE dws_area_stats_daycount(
+    `province_id` STRING COMMENT '地区编号',
+    `visit_count` BIGINT COMMENT '访问次数',
+    `login_count` BIGINT COMMENT '登录次数',
+    `visitor_count` BIGINT COMMENT '访客人数',
+    `user_count` BIGINT COMMENT '用户人数',
+    `order_count` BIGINT COMMENT '下单次数',
+    `order_original_amount` DECIMAL(16,2) COMMENT '下单原始金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '下单最终金额',
+    `payment_count` BIGINT COMMENT '支付次数',
+    `payment_amount` DECIMAL(16,2) COMMENT '支付金额',
+    `refund_order_count` BIGINT COMMENT '退单次数',
+    `refund_order_amount` DECIMAL(16,2) COMMENT '退单金额',
+    `refund_payment_count` BIGINT COMMENT '退款次数',
+    `refund_payment_amount` DECIMAL(16,2) COMMENT '退款金额'
+) COMMENT '每日地区统计表'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dws/dws_area_stats_daycount/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+```
+
+
+
+#### 数据加载脚本
+
+##### 首日
+
+编辑脚本
+
+vi bin/dwd_to_dws_init.sh
+
+```shell
+#!/bin/bash
+
+APP=gmall
+
+if [ -n "$2" ] ;then
+   do_date=$2
+else 
+   echo "请传入日期参数"
+   exit
+fi
+
+dws_visitor_action_daycount="
+insert overwrite table ${APP}.dws_visitor_action_daycount partition(dt='$do_date')
+select
+    t1.mid_id,
+    t1.brand,
+    t1.model,
+    t1.is_new,
+    t1.channel,
+    t1.os,
+    t1.area_code,
+    t1.version_code,
+    t1.visit_count,
+    t3.page_stats
+from
+(
+    select
+        mid_id,
+        brand,
+        model,
+        if(array_contains(collect_set(is_new),'0'),'0','1') is_new,--ods_page_log中，同一天内，同一设备的is_new字段，可能全部为1，可能全部为0，也可能部分为0，部分为1(卸载重装),故做该处理
+        collect_set(channel) channel,
+        collect_set(os) os,
+        collect_set(area_code) area_code,
+        collect_set(version_code) version_code,
+        sum(if(last_page_id is null,1,0)) visit_count
+    from ${APP}.dwd_page_log
+    where dt='$do_date'
+    and last_page_id is null
+    group by mid_id,model,brand
+)t1
+join
+(
+    select
+        mid_id,
+        brand,
+        model,
+        collect_set(named_struct('page_id',page_id,'page_count',page_count,'during_time',during_time)) page_stats
+    from
+    (
+        select
+            mid_id,
+            brand,
+            model,
+            page_id,
+            count(*) page_count,
+            sum(during_time) during_time
+        from ${APP}.dwd_page_log
+        where dt='$do_date'
+        group by mid_id,model,brand,page_id
+    )t2
+    group by mid_id,model,brand
+)t3
+on t1.mid_id=t3.mid_id
+and t1.brand=t3.brand
+and t1.model=t3.model;
+"
+
+dws_area_stats_daycount="
+set hive.exec.dynamic.partition.mode=nonstrict;
+with
+tmp_vu as
+(
+    select
+        dt,
+        id province_id,
+        visit_count,
+        login_count,
+        visitor_count,
+        user_count
+    from
+    (
+        select
+            dt,
+            area_code,
+            count(*) visit_count,--访客访问次数
+            count(user_id) login_count,--用户访问次数,等价于sum(if(user_id is not null,1,0))
+            count(distinct(mid_id)) visitor_count,--访客人数
+            count(distinct(user_id)) user_count--用户人数
+        from ${APP}.dwd_page_log
+        where last_page_id is null
+        group by dt,area_code
+    )tmp
+    left join ${APP}.dim_base_province area
+    on tmp.area_code=area.area_code
+),
+tmp_order as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        province_id,
+        count(*) order_count,
+        sum(original_amount) order_original_amount,
+        sum(final_amount) order_final_amount
+    from ${APP}.dwd_order_info
+    group by date_format(create_time,'yyyy-MM-dd'),province_id
+),
+tmp_pay as
+(
+    select
+        date_format(callback_time,'yyyy-MM-dd') dt,
+        province_id,
+        count(*) payment_count,
+        sum(payment_amount) payment_amount
+    from ${APP}.dwd_payment_info
+    group by date_format(callback_time,'yyyy-MM-dd'),province_id
+),
+tmp_ro as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        province_id,
+        count(*) refund_order_count,
+        sum(refund_amount) refund_order_amount
+    from ${APP}.dwd_order_refund_info
+    group by date_format(create_time,'yyyy-MM-dd'),province_id
+),
+tmp_rp as
+(
+    select
+        date_format(callback_time,'yyyy-MM-dd') dt,
+        province_id,
+        count(*) refund_payment_count,
+        sum(refund_amount) refund_payment_amount
+    from ${APP}.dwd_refund_payment
+    group by date_format(callback_time,'yyyy-MM-dd'),province_id
+)
+insert overwrite table ${APP}.dws_area_stats_daycount partition(dt)
+select
+    province_id,
+    sum(visit_count),
+    sum(login_count),
+    sum(visitor_count),
+    sum(user_count),
+    sum(order_count),
+    sum(order_original_amount),
+    sum(order_final_amount),
+    sum(payment_count),
+    sum(payment_amount),
+    sum(refund_order_count),
+    sum(refund_order_amount),
+    sum(refund_payment_count),
+    sum(refund_payment_amount),
+    dt
+from
+(
+    select
+        dt,
+        province_id,
+        visit_count,
+        login_count,
+        visitor_count,
+        user_count,
+        0 order_count,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_amount
+    from tmp_vu
+    union all
+    select
+        dt,
+        province_id,
+        0 visit_count,
+        0 login_count,
+        0 visitor_count,
+        0 user_count,
+        order_count,
+        order_original_amount,
+        order_final_amount,
+        0 payment_count,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_amount
+    from tmp_order
+    union all
+    select
+        dt,
+        province_id,
+        0 visit_count,
+        0 login_count,
+        0 visitor_count,
+        0 user_count,
+        0 order_count,
+        0 order_original_amount,
+        0 order_final_amount,
+        payment_count,
+        payment_amount,
+        0 refund_order_count,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_amount
+    from tmp_pay
+    union all
+    select
+        dt,
+        province_id,
+        0 visit_count,
+        0 login_count,
+        0 visitor_count,
+        0 user_count,
+        0 order_count,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_amount,
+        refund_order_count,
+        refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_amount
+    from tmp_ro
+    union all
+    select
+        dt,
+        province_id,
+        0 visit_count,
+        0 login_count,
+        0 visitor_count,
+        0 user_count,
+        0 order_count,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_amount,
+        refund_payment_count,
+        refund_payment_amount
+    from tmp_rp
+)t1
+group by dt,province_id;
+"
+
+dws_user_action_daycount="
+set hive.exec.dynamic.partition.mode=nonstrict;
+with
+tmp_login as
+(
+    select
+        dt,
+        user_id,
+        count(*) login_count
+    from ${APP}.dwd_page_log
+    where user_id is not null
+    and last_page_id is null
+    group by dt,user_id
+),
+tmp_cf as
+(
+    select
+        dt,
+        user_id,
+        sum(if(action_id='cart_add',1,0)) cart_count,
+        sum(if(action_id='favor_add',1,0)) favor_count
+    from ${APP}.dwd_action_log
+    where user_id is not null
+    and action_id in ('cart_add','favor_add')
+    group by dt,user_id
+),
+tmp_order as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        user_id,
+        count(*) order_count,
+        sum(if(activity_reduce_amount>0,1,0)) order_activity_count,
+        sum(if(coupon_reduce_amount>0,1,0)) order_coupon_count,
+        sum(activity_reduce_amount) order_activity_reduce_amount,
+        sum(coupon_reduce_amount) order_coupon_reduce_amount,
+        sum(original_amount) order_original_amount,
+        sum(final_amount) order_final_amount
+    from ${APP}.dwd_order_info
+    group by date_format(create_time,'yyyy-MM-dd'),user_id
+),
+tmp_pay as
+(
+    select
+        date_format(callback_time,'yyyy-MM-dd') dt,
+        user_id,
+        count(*) payment_count,
+        sum(payment_amount) payment_amount
+    from ${APP}.dwd_payment_info
+    group by date_format(callback_time,'yyyy-MM-dd'),user_id
+),
+tmp_ri as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        user_id,
+        count(*) refund_order_count,
+        sum(refund_num) refund_order_num,
+        sum(refund_amount) refund_order_amount
+    from ${APP}.dwd_order_refund_info
+    group by date_format(create_time,'yyyy-MM-dd'),user_id
+),
+tmp_rp as
+(
+    select
+        date_format(callback_time,'yyyy-MM-dd') dt,
+        rp.user_id,
+        count(*) refund_payment_count,
+        sum(ri.refund_num) refund_payment_num,
+        sum(rp.refund_amount) refund_payment_amount
+    from
+    (
+        select
+            user_id,
+            order_id,
+            sku_id,
+            refund_amount,
+            callback_time
+        from ${APP}.dwd_refund_payment
+    )rp
+    left join
+    (
+        select
+            user_id,
+            order_id,
+            sku_id,
+            refund_num
+        from ${APP}.dwd_order_refund_info
+    )ri
+    on rp.order_id=ri.order_id
+    and rp.sku_id=rp.sku_id
+    group by date_format(callback_time,'yyyy-MM-dd'),rp.user_id
+),
+tmp_coupon as
+(
+    select
+        coalesce(coupon_get.dt,coupon_using.dt,coupon_used.dt) dt,
+        coalesce(coupon_get.user_id,coupon_using.user_id,coupon_used.user_id) user_id,
+        nvl(coupon_get_count,0) coupon_get_count,
+        nvl(coupon_using_count,0) coupon_using_count,
+        nvl(coupon_used_count,0) coupon_used_count
+    from
+    (
+        select
+            date_format(get_time,'yyyy-MM-dd') dt,
+            user_id,
+            count(*) coupon_get_count
+        from ${APP}.dwd_coupon_use
+        where get_time is not null
+        group by user_id,date_format(get_time,'yyyy-MM-dd')
+    )coupon_get
+    full outer join
+    (
+        select
+            date_format(using_time,'yyyy-MM-dd') dt,
+            user_id,
+            count(*) coupon_using_count
+        from ${APP}.dwd_coupon_use
+        where using_time is not null
+        group by user_id,date_format(using_time,'yyyy-MM-dd')
+    )coupon_using
+    on coupon_get.dt=coupon_using.dt
+    and coupon_get.user_id=coupon_using.user_id
+    full outer join
+    (
+        select
+            date_format(used_time,'yyyy-MM-dd') dt,
+            user_id,
+            count(*) coupon_used_count
+        from ${APP}.dwd_coupon_use
+        where used_time is not null
+        group by user_id,date_format(used_time,'yyyy-MM-dd')
+    )coupon_used
+    on nvl(coupon_get.dt,coupon_using.dt)=coupon_used.dt
+    and nvl(coupon_get.user_id,coupon_using.user_id)=coupon_used.user_id
+),
+tmp_comment as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        user_id,
+        sum(if(appraise='1201',1,0)) appraise_good_count,
+        sum(if(appraise='1202',1,0)) appraise_mid_count,
+        sum(if(appraise='1203',1,0)) appraise_bad_count,
+        sum(if(appraise='1204',1,0)) appraise_default_count
+    from ${APP}.dwd_comment_info
+    group by date_format(create_time,'yyyy-MM-dd'),user_id
+),
+tmp_od as
+(
+    select
+        dt,
+        user_id,
+        collect_set(named_struct('sku_id',sku_id,'sku_num',sku_num,'order_count',order_count,'activity_reduce_amount',activity_reduce_amount,'coupon_reduce_amount',coupon_reduce_amount,'original_amount',original_amount,'final_amount',final_amount)) order_detail_stats
+    from
+    (
+        select
+            date_format(create_time,'yyyy-MM-dd') dt,
+            user_id,
+            sku_id,
+            sum(sku_num) sku_num,
+            count(*) order_count,
+            cast(sum(split_activity_amount) as decimal(16,2)) activity_reduce_amount,
+            cast(sum(split_coupon_amount) as decimal(16,2)) coupon_reduce_amount,
+            cast(sum(original_amount) as decimal(16,2)) original_amount,
+            cast(sum(split_final_amount) as decimal(16,2)) final_amount
+        from ${APP}.dwd_order_detail
+        group by date_format(create_time,'yyyy-MM-dd'),user_id,sku_id
+    )t1
+    group by dt,user_id
+)
+insert overwrite table ${APP}.dws_user_action_daycount partition(dt)
+select
+    coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id,tmp_rp.user_id,tmp_comment.user_id,tmp_coupon.user_id,tmp_od.user_id),
+    nvl(login_count,0),
+    nvl(cart_count,0),
+    nvl(favor_count,0),
+    nvl(order_count,0),
+    nvl(order_activity_count,0),
+    nvl(order_activity_reduce_amount,0),
+    nvl(order_coupon_count,0),
+    nvl(order_coupon_reduce_amount,0),
+    nvl(order_original_amount,0),
+    nvl(order_final_amount,0),
+    nvl(payment_count,0),
+    nvl(payment_amount,0),
+    nvl(refund_order_count,0),
+    nvl(refund_order_num,0),
+    nvl(refund_order_amount,0),
+    nvl(refund_payment_count,0),
+    nvl(refund_payment_num,0),
+    nvl(refund_payment_amount,0),
+    nvl(coupon_get_count,0),
+    nvl(coupon_using_count,0),
+    nvl(coupon_used_count,0),
+    nvl(appraise_good_count,0),
+    nvl(appraise_mid_count,0),
+    nvl(appraise_bad_count,0),
+    nvl(appraise_default_count,0),
+    order_detail_stats,
+    coalesce(tmp_login.dt,tmp_cf.dt,tmp_order.dt,tmp_pay.dt,tmp_ri.dt,tmp_rp.dt,tmp_comment.dt,tmp_coupon.dt,tmp_od.dt)
+from tmp_login
+full outer join tmp_cf
+on tmp_login.user_id=tmp_cf.user_id
+and tmp_login.dt=tmp_cf.dt
+full outer join tmp_order
+on coalesce(tmp_login.user_id,tmp_cf.user_id)=tmp_order.user_id
+and coalesce(tmp_login.dt,tmp_cf.dt)=tmp_order.dt
+full outer join tmp_pay
+on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id)=tmp_pay.user_id
+and coalesce(tmp_login.dt,tmp_cf.dt,tmp_order.dt)=tmp_pay.dt
+full outer join tmp_ri
+on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id)=tmp_ri.user_id
+and coalesce(tmp_login.dt,tmp_cf.dt,tmp_order.dt,tmp_pay.dt)=tmp_ri.dt
+full outer join tmp_rp
+on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id)=tmp_rp.user_id
+and coalesce(tmp_login.dt,tmp_cf.dt,tmp_order.dt,tmp_pay.dt,tmp_ri.dt)=tmp_rp.dt
+full outer join tmp_comment
+on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id,tmp_rp.user_id)=tmp_comment.user_id
+and coalesce(tmp_login.dt,tmp_cf.dt,tmp_order.dt,tmp_pay.dt,tmp_ri.dt,tmp_rp.dt)=tmp_comment.dt
+full outer join tmp_coupon
+on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id,tmp_rp.user_id,tmp_comment.user_id)=tmp_coupon.user_id
+and coalesce(tmp_login.dt,tmp_cf.dt,tmp_order.dt,tmp_pay.dt,tmp_ri.dt,tmp_rp.dt,tmp_comment.dt)=tmp_coupon.dt
+full outer join tmp_od
+on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id,tmp_rp.user_id,tmp_comment.user_id,tmp_coupon.user_id)=tmp_od.user_id
+and coalesce(tmp_login.dt,tmp_cf.dt,tmp_order.dt,tmp_pay.dt,tmp_ri.dt,tmp_rp.dt,tmp_comment.dt,tmp_coupon.dt)=tmp_od.dt;
+"
+
+dws_activity_info_daycount="
+set hive.exec.dynamic.partition.mode=nonstrict;
+with
+tmp_order as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        activity_rule_id,
+        activity_id,
+        count(*) order_count,
+        sum(split_activity_amount) order_reduce_amount,
+        sum(original_amount) order_original_amount,
+        sum(split_final_amount) order_final_amount
+    from ${APP}.dwd_order_detail
+    where activity_id is not null
+    group by date_format(create_time,'yyyy-MM-dd'),activity_rule_id,activity_id
+),
+tmp_pay as
+(
+    select
+        date_format(callback_time,'yyyy-MM-dd') dt,
+        activity_rule_id,
+        activity_id,
+        count(*) payment_count,
+        sum(split_activity_amount) payment_reduce_amount,
+        sum(split_final_amount) payment_amount
+    from
+    (
+        select
+            activity_rule_id,
+            activity_id,
+            order_id,
+            split_activity_amount,
+            split_final_amount
+        from ${APP}.dwd_order_detail
+        where activity_id is not null
+    )od
+    join
+    (
+        select
+            order_id,
+            callback_time
+        from ${APP}.dwd_payment_info
+    )pi
+    on od.order_id=pi.order_id
+    group by date_format(callback_time,'yyyy-MM-dd'),activity_rule_id,activity_id
+)
+insert overwrite table ${APP}.dws_activity_info_daycount partition(dt)
+select
+    activity_rule_id,
+    activity_id,
+    sum(order_count),
+    sum(order_reduce_amount),
+    sum(order_original_amount),
+    sum(order_final_amount),
+    sum(payment_count),
+    sum(payment_reduce_amount),
+    sum(payment_amount),
+    dt
+from
+(
+    select
+        dt,
+        activity_rule_id,
+        activity_id,
+        order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        0 payment_count,
+        0 payment_reduce_amount,
+        0 payment_amount
+    from tmp_order
+    union all
+    select
+        dt,
+        activity_rule_id,
+        activity_id,
+        0 order_count,
+        0 order_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        payment_count,
+        payment_reduce_amount,
+        payment_amount
+    from tmp_pay
+)t1
+group by dt,activity_rule_id,activity_id;"
+
+dws_sku_action_daycount="
+set hive.exec.dynamic.partition.mode=nonstrict;
+with
+tmp_order as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        sku_id,
+        count(*) order_count,
+        sum(sku_num) order_num,
+        sum(if(split_activity_amount>0,1,0)) order_activity_count,
+        sum(if(split_coupon_amount>0,1,0)) order_coupon_count,
+        sum(split_activity_amount) order_activity_reduce_amount,
+        sum(split_coupon_amount) order_coupon_reduce_amount,
+        sum(original_amount) order_original_amount,
+        sum(split_final_amount) order_final_amount
+    from ${APP}.dwd_order_detail
+    group by date_format(create_time,'yyyy-MM-dd'),sku_id
+),
+tmp_pay as
+(
+    select
+        date_format(callback_time,'yyyy-MM-dd') dt,
+        sku_id,
+        count(*) payment_count,
+        sum(sku_num) payment_num,
+        sum(split_final_amount) payment_amount
+    from ${APP}.dwd_order_detail od
+    join
+    (
+        select
+            order_id,
+            callback_time
+        from ${APP}.dwd_payment_info
+        where callback_time is not null
+    )pi on pi.order_id=od.order_id
+    group by date_format(callback_time,'yyyy-MM-dd'),sku_id
+),
+tmp_ri as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        sku_id,
+        count(*) refund_order_count,
+        sum(refund_num) refund_order_num,
+        sum(refund_amount) refund_order_amount
+    from ${APP}.dwd_order_refund_info
+    group by date_format(create_time,'yyyy-MM-dd'),sku_id
+),
+tmp_rp as
+(
+    select
+        date_format(callback_time,'yyyy-MM-dd') dt,
+        rp.sku_id,
+        count(*) refund_payment_count,
+        sum(ri.refund_num) refund_payment_num,
+        sum(refund_amount) refund_payment_amount
+    from
+    (
+        select
+            order_id,
+            sku_id,
+            refund_amount,
+            callback_time
+        from ${APP}.dwd_refund_payment
+    )rp
+    left join
+    (
+        select
+            order_id,
+            sku_id,
+            refund_num
+        from ${APP}.dwd_order_refund_info
+    )ri
+    on rp.order_id=ri.order_id
+    and rp.sku_id=ri.sku_id
+    group by date_format(callback_time,'yyyy-MM-dd'),rp.sku_id
+),
+tmp_cf as
+(
+    select
+        dt,
+        item sku_id,
+        sum(if(action_id='cart_add',1,0)) cart_count,
+        sum(if(action_id='favor_add',1,0)) favor_count
+    from ${APP}.dwd_action_log
+    where action_id in ('cart_add','favor_add')
+    group by dt,item
+),
+tmp_comment as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        sku_id,
+        sum(if(appraise='1201',1,0)) appraise_good_count,
+        sum(if(appraise='1202',1,0)) appraise_mid_count,
+        sum(if(appraise='1203',1,0)) appraise_bad_count,
+        sum(if(appraise='1204',1,0)) appraise_default_count
+    from ${APP}.dwd_comment_info
+    group by date_format(create_time,'yyyy-MM-dd'),sku_id
+)
+insert overwrite table ${APP}.dws_sku_action_daycount partition(dt)
+select
+    sku_id,
+    sum(order_count),
+    sum(order_num),
+    sum(order_activity_count),
+    sum(order_coupon_count),
+    sum(order_activity_reduce_amount),
+    sum(order_coupon_reduce_amount),
+    sum(order_original_amount),
+    sum(order_final_amount),
+    sum(payment_count),
+    sum(payment_num),
+    sum(payment_amount),
+    sum(refund_order_count),
+    sum(refund_order_num),
+    sum(refund_order_amount),
+    sum(refund_payment_count),
+    sum(refund_payment_num),
+    sum(refund_payment_amount),
+    sum(cart_count),
+    sum(favor_count),
+    sum(appraise_good_count),
+    sum(appraise_mid_count),
+    sum(appraise_bad_count),
+    sum(appraise_default_count),
+    dt
+from
+(
+    select
+        dt,
+        sku_id,
+        order_count,
+        order_num,
+        order_activity_count,
+        order_coupon_count,
+        order_activity_reduce_amount,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_order
+    union all
+    select
+        dt,
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        payment_count,
+        payment_num,
+        payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_pay
+    union all
+    select
+        dt,
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_ri
+    union all
+    select
+        dt,
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_rp
+    union all
+    select
+        dt,
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        cart_count,
+        favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_cf
+    union all
+    select
+        dt,
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from tmp_comment
+)t1
+group by dt,sku_id;"
+
+dws_coupon_info_daycount="
+set hive.exec.dynamic.partition.mode=nonstrict;
+with
+tmp_cu as
+(
+    select
+        coalesce(coupon_get.dt,coupon_using.dt,coupon_used.dt,coupon_exprie.dt) dt,
+        coalesce(coupon_get.coupon_id,coupon_using.coupon_id,coupon_used.coupon_id,coupon_exprie.coupon_id) coupon_id,
+        nvl(get_count,0) get_count,
+        nvl(order_count,0) order_count,
+        nvl(payment_count,0) payment_count,
+        nvl(expire_count,0) expire_count
+    from
+    (
+        select
+            date_format(get_time,'yyyy-MM-dd') dt,
+            coupon_id,
+            count(*) get_count
+        from ${APP}.dwd_coupon_use
+        group by date_format(get_time,'yyyy-MM-dd'),coupon_id
+    )coupon_get
+    full outer join
+    (
+        select
+            date_format(using_time,'yyyy-MM-dd') dt,
+            coupon_id,
+            count(*) order_count
+        from ${APP}.dwd_coupon_use
+        where using_time is not null
+        group by date_format(using_time,'yyyy-MM-dd'),coupon_id
+    )coupon_using
+    on coupon_get.dt=coupon_using.dt
+    and coupon_get.coupon_id=coupon_using.coupon_id
+    full outer join
+    (
+        select
+            date_format(used_time,'yyyy-MM-dd') dt,
+            coupon_id,
+            count(*) payment_count
+        from ${APP}.dwd_coupon_use
+        where used_time is not null
+        group by date_format(used_time,'yyyy-MM-dd'),coupon_id
+    )coupon_used
+    on nvl(coupon_get.dt,coupon_using.dt)=coupon_used.dt
+    and nvl(coupon_get.coupon_id,coupon_using.coupon_id)=coupon_used.coupon_id
+    full outer join
+    (
+        select
+            date_format(expire_time,'yyyy-MM-dd') dt,
+            coupon_id,
+            count(*) expire_count
+        from ${APP}.dwd_coupon_use
+        where expire_time is not null
+        group by date_format(expire_time,'yyyy-MM-dd'),coupon_id
+    )coupon_exprie
+    on coalesce(coupon_get.dt,coupon_using.dt,coupon_used.dt)=coupon_exprie.dt
+    and coalesce(coupon_get.coupon_id,coupon_using.coupon_id,coupon_used.coupon_id)=coupon_exprie.coupon_id
+),
+tmp_order as
+(
+    select
+        date_format(create_time,'yyyy-MM-dd') dt,
+        coupon_id,
+        sum(split_coupon_amount) order_reduce_amount,
+        sum(original_amount) order_original_amount,
+        sum(split_final_amount) order_final_amount
+    from ${APP}.dwd_order_detail
+    where coupon_id is not null
+    group by date_format(create_time,'yyyy-MM-dd'),coupon_id
+),
+tmp_pay as
+(
+    select
+        date_format(callback_time,'yyyy-MM-dd') dt,
+        coupon_id,
+        sum(split_coupon_amount) payment_reduce_amount,
+        sum(split_final_amount) payment_amount
+    from
+    (
+        select
+            order_id,
+            coupon_id,
+            split_coupon_amount,
+            split_final_amount
+        from ${APP}.dwd_order_detail
+        where coupon_id is not null
+    )od
+    join
+    (
+        select
+            order_id,
+            callback_time
+        from ${APP}.dwd_payment_info
+    )pi
+    on od.order_id=pi.order_id
+    group by date_format(callback_time,'yyyy-MM-dd'),coupon_id
+)
+insert overwrite table ${APP}.dws_coupon_info_daycount partition(dt)
+select
+    coupon_id,
+    sum(get_count),
+    sum(order_count),
+    sum(order_reduce_amount),
+    sum(order_original_amount),
+    sum(order_final_amount),
+    sum(payment_count),
+    sum(payment_reduce_amount),
+    sum(payment_amount),
+    sum(expire_count),
+    dt
+from
+(
+    select
+        dt,
+        coupon_id,
+        get_count,
+        order_count,
+        0 order_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        payment_count,
+        0 payment_reduce_amount,
+        0 payment_amount,
+        expire_count
+    from tmp_cu
+    union all
+    select
+        dt,
+        coupon_id,
+        0 get_count,
+        0 order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        0 payment_count,
+        0 payment_reduce_amount,
+        0 payment_amount,
+        0 expire_count
+    from tmp_order
+    union all
+    select
+        dt,
+        coupon_id,
+        0 get_count,
+        0 order_count,
+        0 order_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        payment_reduce_amount,
+        payment_amount,
+        0 expire_count
+    from tmp_pay
+)t1
+group by dt,coupon_id;
+"
+
+case $1 in
+    "dws_visitor_action_daycount" )
+        hive -e "$dws_visitor_action_daycount"
+    ;;
+    "dws_user_action_daycount" )
+        hive -e "$dws_user_action_daycount"
+    ;;
+    "dws_activity_info_daycount" )
+        hive -e "$dws_activity_info_daycount"
+    ;;
+    "dws_area_stats_daycount" )
+        hive -e "$dws_area_stats_daycount"
+    ;;
+    "dws_sku_action_daycount" )
+        hive -e "$dws_sku_action_daycount"
+    ;;
+    "dws_coupon_info_daycount" )
+        hive -e "$dws_coupon_info_daycount"
+    ;;
+    "all" )
+        hive -e "$dws_visitor_action_daycount$dws_user_action_daycount$dws_activity_info_daycount$dws_area_stats_daycount$dws_sku_action_daycount$dws_coupon_info_daycount"
+    ;;
+esac
+```
+
+
+
+修改权限
+
+chmod +x bin/dwd_to_dws_init.sh
+
+执行脚本
+
+dwd_to_dws_init.sh all 2020-06-14
+
+##### 每日
+
+编辑脚本
+
+vi bin/dwd_to_dws.sh
+
+```shell
+#!/bin/bash
+
+APP=gmall
+# 如果是输入的日期按照取输入日期；如果没输入日期取当前时间的前一天
+if [ -n "$2" ] ;then
+    do_date=$2
+else 
+    do_date=`date -d "-1 day" +%F`
+fi
+
+dws_visitor_action_daycount="insert overwrite table ${APP}.dws_visitor_action_daycount partition(dt='$do_date')
+select
+    t1.mid_id,
+    t1.brand,
+    t1.model,
+    t1.is_new,
+    t1.channel,
+    t1.os,
+    t1.area_code,
+    t1.version_code,
+    t1.visit_count,
+    t3.page_stats
+from
+(
+    select
+        mid_id,
+        brand,
+        model,
+        if(array_contains(collect_set(is_new),'0'),'0','1') is_new,--ods_page_log中，同一天内，同一设备的is_new字段，可能全部为1，可能全部为0，也可能部分为0，部分为1(卸载重装),故做该处理
+        collect_set(channel) channel,
+        collect_set(os) os,
+        collect_set(area_code) area_code,
+        collect_set(version_code) version_code,
+        sum(if(last_page_id is null,1,0)) visit_count
+    from ${APP}.dwd_page_log
+    where dt='$do_date'
+    and last_page_id is null
+    group by mid_id,model,brand
+)t1
+join
+(
+    select
+        mid_id,
+        brand,
+        model,
+        collect_set(named_struct('page_id',page_id,'page_count',page_count,'during_time',during_time)) page_stats
+    from
+    (
+        select
+            mid_id,
+            brand,
+            model,
+            page_id,
+            count(*) page_count,
+            sum(during_time) during_time
+        from ${APP}.dwd_page_log
+        where dt='$do_date'
+        group by mid_id,model,brand,page_id
+    )t2
+    group by mid_id,model,brand
+)t3
+on t1.mid_id=t3.mid_id
+and t1.brand=t3.brand
+and t1.model=t3.model;"
+
+dws_user_action_daycount="
+with
+tmp_login as
+(
+    select
+        user_id,
+        count(*) login_count
+    from ${APP}.dwd_page_log
+    where dt='$do_date'
+    and user_id is not null
+    and last_page_id is null
+    group by user_id
+),
+tmp_cf as
+(
+    select
+        user_id,
+        sum(if(action_id='cart_add',1,0)) cart_count,
+        sum(if(action_id='favor_add',1,0)) favor_count
+    from ${APP}.dwd_action_log
+    where dt='$do_date'
+    and user_id is not null
+    and action_id in ('cart_add','favor_add')
+    group by user_id
+),
+tmp_order as
+(
+    select
+        user_id,
+        count(*) order_count,
+        sum(if(activity_reduce_amount>0,1,0)) order_activity_count,
+        sum(if(coupon_reduce_amount>0,1,0)) order_coupon_count,
+        sum(activity_reduce_amount) order_activity_reduce_amount,
+        sum(coupon_reduce_amount) order_coupon_reduce_amount,
+        sum(original_amount) order_original_amount,
+        sum(final_amount) order_final_amount
+    from ${APP}.dwd_order_info
+    where (dt='$do_date'
+    or dt='9999-99-99')
+    and date_format(create_time,'yyyy-MM-dd')='$do_date'
+    group by user_id
+),
+tmp_pay as
+(
+    select
+        user_id,
+        count(*) payment_count,
+        sum(payment_amount) payment_amount
+    from ${APP}.dwd_payment_info
+    where dt='$do_date'
+    group by user_id
+),
+tmp_ri as
+(
+    select
+        user_id,
+        count(*) refund_order_count,
+        sum(refund_num) refund_order_num,
+        sum(refund_amount) refund_order_amount
+    from ${APP}.dwd_order_refund_info
+    where dt='$do_date'
+    group by user_id
+),
+tmp_rp as
+(
+    select
+        rp.user_id,
+        count(*) refund_payment_count,
+        sum(ri.refund_num) refund_payment_num,
+        sum(rp.refund_amount) refund_payment_amount
+    from
+    (
+        select
+            user_id,
+            order_id,
+            sku_id,
+            refund_amount
+        from ${APP}.dwd_refund_payment
+        where dt='$do_date'
+    )rp
+    left join
+    (
+        select
+            user_id,
+            order_id,
+            sku_id,
+            refund_num
+        from ${APP}.dwd_order_refund_info
+        where dt>=date_add('$do_date',-15)
+    )ri
+    on rp.order_id=ri.order_id
+    and rp.sku_id=rp.sku_id
+    group by rp.user_id
+),
+tmp_coupon as
+(
+    select
+        user_id,
+        sum(if(date_format(get_time,'yyyy-MM-dd')='$do_date',1,0)) coupon_get_count,
+        sum(if(date_format(using_time,'yyyy-MM-dd')='$do_date',1,0)) coupon_using_count,
+        sum(if(date_format(used_time,'yyyy-MM-dd')='$do_date',1,0)) coupon_used_count
+    from ${APP}.dwd_coupon_use
+    where (dt='$do_date' or dt='9999-99-99')
+    and (date_format(get_time, 'yyyy-MM-dd') = '$do_date'
+    or date_format(using_time,'yyyy-MM-dd')='$do_date'
+    or date_format(used_time,'yyyy-MM-dd')='$do_date')
+    group by user_id
+),
+tmp_comment as
+(
+    select
+        user_id,
+        sum(if(appraise='1201',1,0)) appraise_good_count,
+        sum(if(appraise='1202',1,0)) appraise_mid_count,
+        sum(if(appraise='1203',1,0)) appraise_bad_count,
+        sum(if(appraise='1204',1,0)) appraise_default_count
+    from ${APP}.dwd_comment_info
+    where dt='$do_date'
+    group by user_id
+),
+tmp_od as
+(
+    select
+        user_id,
+        collect_set(named_struct('sku_id',sku_id,'sku_num',sku_num,'order_count',order_count,'activity_reduce_amount',activity_reduce_amount,'coupon_reduce_amount',coupon_reduce_amount,'original_amount',original_amount,'final_amount',final_amount)) order_detail_stats
+    from
+    (
+        select
+            user_id,
+            sku_id,
+            sum(sku_num) sku_num,
+            count(*) order_count,
+            cast(sum(split_activity_amount) as decimal(16,2)) activity_reduce_amount,
+            cast(sum(split_coupon_amount) as decimal(16,2)) coupon_reduce_amount,
+            cast(sum(original_amount) as decimal(16,2)) original_amount,
+            cast(sum(split_final_amount) as decimal(16,2)) final_amount
+        from ${APP}.dwd_order_detail
+        where dt='$do_date'
+        group by user_id,sku_id
+    )t1
+    group by user_id
+)
+insert overwrite table ${APP}.dws_user_action_daycount partition(dt='$do_date')
+select
+    coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id,tmp_rp.user_id,tmp_comment.user_id,tmp_coupon.user_id,tmp_od.user_id),
+    nvl(login_count,0),
+    nvl(cart_count,0),
+    nvl(favor_count,0),
+    nvl(order_count,0),
+    nvl(order_activity_count,0),
+    nvl(order_activity_reduce_amount,0),
+    nvl(order_coupon_count,0),
+    nvl(order_coupon_reduce_amount,0),
+    nvl(order_original_amount,0),
+    nvl(order_final_amount,0),
+    nvl(payment_count,0),
+    nvl(payment_amount,0),
+    nvl(refund_order_count,0),
+    nvl(refund_order_num,0),
+    nvl(refund_order_amount,0),
+    nvl(refund_payment_count,0),
+    nvl(refund_payment_num,0),
+    nvl(refund_payment_amount,0),
+    nvl(coupon_get_count,0),
+    nvl(coupon_using_count,0),
+    nvl(coupon_used_count,0),
+    nvl(appraise_good_count,0),
+    nvl(appraise_mid_count,0),
+    nvl(appraise_bad_count,0),
+    nvl(appraise_default_count,0),
+    order_detail_stats
+from tmp_login
+full outer join tmp_cf on tmp_login.user_id=tmp_cf.user_id
+full outer join tmp_order on coalesce(tmp_login.user_id,tmp_cf.user_id)=tmp_order.user_id
+full outer join tmp_pay on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id)=tmp_pay.user_id
+full outer join tmp_ri on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id)=tmp_ri.user_id
+full outer join tmp_rp on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id)=tmp_rp.user_id
+full outer join tmp_comment on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id,tmp_rp.user_id)=tmp_comment.user_id
+full outer join tmp_coupon on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id,tmp_rp.user_id,tmp_comment.user_id)=tmp_coupon.user_id
+full outer join tmp_od on coalesce(tmp_login.user_id,tmp_cf.user_id,tmp_order.user_id,tmp_pay.user_id,tmp_ri.user_id,tmp_rp.user_id,tmp_comment.user_id,tmp_coupon.user_id)=tmp_od.user_id;
+"
+
+
+dws_activity_info_daycount="
+with
+tmp_order as
+(
+    select
+        activity_rule_id,
+        activity_id,
+        count(*) order_count,
+        sum(split_activity_amount) order_reduce_amount,
+        sum(original_amount) order_original_amount,
+        sum(split_final_amount) order_final_amount
+    from ${APP}.dwd_order_detail
+    where dt='$do_date'
+    and activity_id is not null
+    group by activity_rule_id,activity_id
+),
+tmp_pay as
+(
+    select
+        activity_rule_id,
+        activity_id,
+        count(*) payment_count,
+        sum(split_activity_amount) payment_reduce_amount,
+        sum(split_final_amount) payment_amount
+    from ${APP}.dwd_order_detail
+    where (dt='$do_date'
+    or dt=date_add('$do_date',-1))
+    and activity_id is not null
+    and order_id in
+    (
+        select order_id from ${APP}.dwd_payment_info where dt='$do_date'
+    )
+    group by activity_rule_id,activity_id
+)
+insert overwrite table ${APP}.dws_activity_info_daycount partition(dt='$do_date')
+select
+    activity_rule_id,
+    activity_id,
+    sum(order_count),
+    sum(order_reduce_amount),
+    sum(order_original_amount),
+    sum(order_final_amount),
+    sum(payment_count),
+    sum(payment_reduce_amount),
+    sum(payment_amount)
+from
+(
+    select
+        activity_rule_id,
+        activity_id,
+        order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        0 payment_count,
+        0 payment_reduce_amount,
+        0 payment_amount
+    from tmp_order
+    union all
+    select
+        activity_rule_id,
+        activity_id,
+        0 order_count,
+        0 order_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        payment_count,
+        payment_reduce_amount,
+        payment_amount
+    from tmp_pay
+)t1
+group by activity_rule_id,activity_id;"
+
+
+dws_sku_action_daycount="
+with
+tmp_order as
+(
+    select
+        sku_id,
+        count(*) order_count,
+        sum(sku_num) order_num,
+        sum(if(split_activity_amount>0,1,0)) order_activity_count,
+        sum(if(split_coupon_amount>0,1,0)) order_coupon_count,
+        sum(split_activity_amount) order_activity_reduce_amount,
+        sum(split_coupon_amount) order_coupon_reduce_amount,
+        sum(original_amount) order_original_amount,
+        sum(split_final_amount) order_final_amount
+    from ${APP}.dwd_order_detail
+    where dt='$do_date'
+    group by sku_id
+),
+tmp_pay as
+(
+    select
+        sku_id,
+        count(*) payment_count,
+        sum(sku_num) payment_num,
+        sum(split_final_amount) payment_amount
+    from ${APP}.dwd_order_detail
+    where (dt='$do_date'
+    or dt=date_add('$do_date',-1))
+    and order_id in
+    (
+        select order_id from ${APP}.dwd_payment_info where dt='$do_date'
+    )
+    group by sku_id
+),
+tmp_ri as
+(
+    select
+        sku_id,
+        count(*) refund_order_count,
+        sum(refund_num) refund_order_num,
+        sum(refund_amount) refund_order_amount
+    from ${APP}.dwd_order_refund_info
+    where dt='$do_date'
+    group by sku_id
+),
+tmp_rp as
+(
+    select
+        rp.sku_id,
+        count(*) refund_payment_count,
+        sum(ri.refund_num) refund_payment_num,
+        sum(refund_amount) refund_payment_amount
+    from
+    (
+        select
+            order_id,
+            sku_id,
+            refund_amount
+        from ${APP}.dwd_refund_payment
+        where dt='$do_date'
+    )rp
+    left join
+    (
+        select
+            order_id,
+            sku_id,
+            refund_num
+        from ${APP}.dwd_order_refund_info
+        where dt>=date_add('$do_date',-15)
+    )ri
+    on rp.order_id=ri.order_id
+    and rp.sku_id=ri.sku_id
+    group by rp.sku_id
+),
+tmp_cf as
+(
+    select
+        item sku_id,
+        sum(if(action_id='cart_add',1,0)) cart_count,
+        sum(if(action_id='favor_add',1,0)) favor_count
+    from ${APP}.dwd_action_log
+    where dt='$do_date'
+    and action_id in ('cart_add','favor_add')
+    group by item
+),
+tmp_comment as
+(
+    select
+        sku_id,
+        sum(if(appraise='1201',1,0)) appraise_good_count,
+        sum(if(appraise='1202',1,0)) appraise_mid_count,
+        sum(if(appraise='1203',1,0)) appraise_bad_count,
+        sum(if(appraise='1204',1,0)) appraise_default_count
+    from ${APP}.dwd_comment_info
+    where dt='$do_date'
+    group by sku_id
+)
+insert overwrite table ${APP}.dws_sku_action_daycount partition(dt='$do_date')
+select
+    sku_id,
+    sum(order_count),
+    sum(order_num),
+    sum(order_activity_count),
+    sum(order_coupon_count),
+    sum(order_activity_reduce_amount),
+    sum(order_coupon_reduce_amount),
+    sum(order_original_amount),
+    sum(order_final_amount),
+    sum(payment_count),
+    sum(payment_num),
+    sum(payment_amount),
+    sum(refund_order_count),
+    sum(refund_order_num),
+    sum(refund_order_amount),
+    sum(refund_payment_count),
+    sum(refund_payment_num),
+    sum(refund_payment_amount),
+    sum(cart_count),
+    sum(favor_count),
+    sum(appraise_good_count),
+    sum(appraise_mid_count),
+    sum(appraise_bad_count),
+    sum(appraise_default_count)
+from
+(
+    select
+        sku_id,
+        order_count,
+        order_num,
+        order_activity_count,
+        order_coupon_count,
+        order_activity_reduce_amount,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_order
+    union all
+    select
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        payment_count,
+        payment_num,
+        payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_pay
+    union all
+    select
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_ri
+    union all
+    select
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_rp
+    union all
+    select
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        cart_count,
+        favor_count,
+        0 appraise_good_count,
+        0 appraise_mid_count,
+        0 appraise_bad_count,
+        0 appraise_default_count
+    from tmp_cf
+    union all
+    select
+        sku_id,
+        0 order_count,
+        0 order_num,
+        0 order_activity_count,
+        0 order_coupon_count,
+        0 order_activity_reduce_amount,
+        0 order_coupon_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_num,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_num,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_num,
+        0 refund_payment_amount,
+        0 cart_count,
+        0 favor_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from tmp_comment
+)t1
+group by sku_id;"
+
+dws_coupon_info_daycount="
+with
+tmp_cu as
+(
+    select
+        coupon_id,
+        sum(if(date_format(get_time,'yyyy-MM-dd')='$do_date',1,0)) get_count,
+        sum(if(date_format(using_time,'yyyy-MM-dd')='$do_date',1,0)) order_count,
+        sum(if(date_format(used_time,'yyyy-MM-dd')='$do_date',1,0)) payment_count,
+        sum(if(date_format(expire_time,'yyyy-MM-dd')='$do_date',1,0)) expire_count
+    from ${APP}.dwd_coupon_use
+    where dt='9999-99-99'
+    or dt='$do_date'
+    group by coupon_id
+),
+tmp_order as
+(
+    select
+        coupon_id,
+        sum(split_coupon_amount) order_reduce_amount,
+        sum(original_amount) order_original_amount,
+        sum(split_final_amount) order_final_amount
+    from ${APP}.dwd_order_detail
+    where dt='$do_date'
+    and coupon_id is not null
+    group by coupon_id
+),
+tmp_pay as
+(
+    select
+        coupon_id,
+        sum(split_coupon_amount) payment_reduce_amount,
+        sum(split_final_amount) payment_amount
+    from ${APP}.dwd_order_detail
+    where (dt='$do_date'
+    or dt=date_add('$do_date',-1))
+    and coupon_id is not null
+    and order_id in
+    (
+        select order_id from ${APP}.dwd_payment_info where dt='$do_date'
+    )
+    group by coupon_id
+)
+insert overwrite table ${APP}.dws_coupon_info_daycount partition(dt='$do_date')
+select
+    coupon_id,
+    sum(get_count),
+    sum(order_count),
+    sum(order_reduce_amount),
+    sum(order_original_amount),
+    sum(order_final_amount),
+    sum(payment_count),
+    sum(payment_reduce_amount),
+    sum(payment_amount),
+    sum(expire_count)
+from
+(
+    select
+        coupon_id,
+        get_count,
+        order_count,
+        0 order_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        payment_count,
+        0 payment_reduce_amount,
+        0 payment_amount,
+        expire_count
+    from tmp_cu
+    union all
+    select
+        coupon_id,
+        0 get_count,
+        0 order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        0 payment_count,
+        0 payment_reduce_amount,
+        0 payment_amount,
+        0 expire_count
+    from tmp_order
+    union all
+    select
+        coupon_id,
+        0 get_count,
+        0 order_count,
+        0 order_reduce_amount,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        payment_reduce_amount,
+        payment_amount,
+        0 expire_count
+    from tmp_pay
+)t1
+group by coupon_id;"
+
+
+dws_area_stats_daycount="
+with
+tmp_vu as
+(
+    select
+        id province_id,
+        visit_count,
+        login_count,
+        visitor_count,
+        user_count
+    from
+    (
+        select
+            area_code,
+            count(*) visit_count,--访客访问次数
+            count(user_id) login_count,--用户访问次数,等价于sum(if(user_id is not null,1,0))
+            count(distinct(mid_id)) visitor_count,--访客人数
+            count(distinct(user_id)) user_count--用户人数
+        from ${APP}.dwd_page_log
+        where dt='$do_date'
+        and last_page_id is null
+        group by area_code
+    )tmp
+    left join ${APP}.dim_base_province area
+    on tmp.area_code=area.area_code
+),
+tmp_order as
+(
+    select
+        province_id,
+        count(*) order_count,
+        sum(original_amount) order_original_amount,
+        sum(final_amount) order_final_amount
+    from ${APP}.dwd_order_info
+    where dt='$do_date'
+    or dt='9999-99-99'
+    and date_format(create_time,'yyyy-MM-dd')='$do_date'
+    group by province_id
+),
+tmp_pay as
+(
+    select
+        province_id,
+        count(*) payment_count,
+        sum(payment_amount) payment_amount
+    from ${APP}.dwd_payment_info
+    where dt='$do_date'
+    group by province_id
+),
+tmp_ro as
+(
+    select
+        province_id,
+        count(*) refund_order_count,
+        sum(refund_amount) refund_order_amount
+    from ${APP}.dwd_order_refund_info
+    where dt='$do_date'
+    group by province_id
+),
+tmp_rp as
+(
+    select
+        province_id,
+        count(*) refund_payment_count,
+        sum(refund_amount) refund_payment_amount
+    from ${APP}.dwd_refund_payment
+    where dt='$do_date'
+    group by province_id
+)
+insert overwrite table ${APP}.dws_area_stats_daycount partition(dt='$do_date')
+select
+    province_id,
+    sum(visit_count),
+    sum(login_count),
+    sum(visitor_count),
+    sum(user_count),
+    sum(order_count),
+    sum(order_original_amount),
+    sum(order_final_amount),
+    sum(payment_count),
+    sum(payment_amount),
+    sum(refund_order_count),
+    sum(refund_order_amount),
+    sum(refund_payment_count),
+    sum(refund_payment_amount)
+from
+(
+    select
+        province_id,
+        visit_count,
+        login_count,
+        visitor_count,
+        user_count,
+        0 order_count,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_amount
+    from tmp_vu
+    union all
+    select
+        province_id,
+        0 visit_count,
+        0 login_count,
+        0 visitor_count,
+        0 user_count,
+        order_count,
+        order_original_amount,
+        order_final_amount,
+        0 payment_count,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_amount
+    from tmp_order
+    union all
+    select
+        province_id,
+        0 visit_count,
+        0 login_count,
+        0 visitor_count,
+        0 user_count,
+        0 order_count,
+        0 order_original_amount,
+        0 order_final_amount,
+        payment_count,
+        payment_amount,
+        0 refund_order_count,
+        0 refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_amount
+    from tmp_pay
+    union all
+    select
+        province_id,
+        0 visit_count,
+        0 login_count,
+        0 visitor_count,
+        0 user_count,
+        0 order_count,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_amount,
+        refund_order_count,
+        refund_order_amount,
+        0 refund_payment_count,
+        0 refund_payment_amount
+    from tmp_ro
+    union all
+    select
+        province_id,
+        0 visit_count,
+        0 login_count,
+        0 visitor_count,
+        0 user_count,
+        0 order_count,
+        0 order_original_amount,
+        0 order_final_amount,
+        0 payment_count,
+        0 payment_amount,
+        0 refund_order_count,
+        0 refund_order_amount,
+        refund_payment_count,
+        refund_payment_amount
+    from tmp_rp
+)t1
+group by province_id;"
+
+case $1 in
+    "dws_visitor_action_daycount" )
+        hive -e "$dws_visitor_action_daycount"
+    ;;
+    "dws_user_action_daycount" )
+        hive -e "$dws_user_action_daycount"
+    ;;
+    "dws_activity_info_daycount" )
+        hive -e "$dws_activity_info_daycount"
+    ;;
+    "dws_area_stats_daycount" )
+        hive -e "$dws_area_stats_daycount"
+    ;;
+    "dws_sku_action_daycount" )
+        hive -e "$dws_sku_action_daycount"
+    ;;
+    "dws_coupon_info_daycount" )
+        hive -e "$dws_coupon_info_daycount"
+    ;;
+    "all" )
+        hive -e "$dws_visitor_action_daycount$dws_user_action_daycount$dws_activity_info_daycount$dws_area_stats_daycount$dws_sku_action_daycount$dws_coupon_info_daycount"
+    ;;
+esac
+```
+
+修改权限
+
+chmod +x bin/dwd_to_dws.sh
+
+执行脚本
+
+dwd_to_dws.sh all 2020-06-15
+
+### DWT层
+
+#### 访客主题
+#### 用户主题
+#### 商品主题
+#### 优惠券主题
+#### 活动主题
+#### 地区主题
+
+**建表语句**
+
+```sql
+-- 访客
+DROP TABLE IF EXISTS dwt_visitor_topic;
+CREATE EXTERNAL TABLE dwt_visitor_topic
+(
+    `mid_id` STRING COMMENT '设备id',
+    `brand` STRING COMMENT '手机品牌',
+    `model` STRING COMMENT '手机型号',
+    `channel` ARRAY<STRING> COMMENT '渠道',
+    `os` ARRAY<STRING> COMMENT '操作系统',
+    `area_code` ARRAY<STRING> COMMENT '地区ID',
+    `version_code` ARRAY<STRING> COMMENT '应用版本',
+    `visit_date_first` STRING  COMMENT '首次访问时间',
+    `visit_date_last` STRING  COMMENT '末次访问时间',
+    `visit_last_1d_count` BIGINT COMMENT '最近1日访问次数',
+    `visit_last_1d_day_count` BIGINT COMMENT '最近1日访问天数',
+    `visit_last_7d_count` BIGINT COMMENT '最近7日访问次数',
+    `visit_last_7d_day_count` BIGINT COMMENT '最近7日访问天数',
+    `visit_last_30d_count` BIGINT COMMENT '最近30日访问次数',
+    `visit_last_30d_day_count` BIGINT COMMENT '最近30日访问天数',
+    `visit_count` BIGINT COMMENT '累积访问次数',
+    `visit_day_count` BIGINT COMMENT '累积访问天数'
+) COMMENT '设备主题宽表'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dwt/dwt_visitor_topic'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 用户
+DROP TABLE IF EXISTS dwt_user_topic;
+CREATE EXTERNAL TABLE dwt_user_topic
+(
+    `user_id` STRING  COMMENT '用户id',
+    `login_date_first` STRING COMMENT '首次活跃日期',
+    `login_date_last` STRING COMMENT '末次活跃日期',
+    `login_date_1d_count` STRING COMMENT '最近1日登录次数',
+    `login_last_1d_day_count` BIGINT COMMENT '最近1日登录天数',
+    `login_last_7d_count` BIGINT COMMENT '最近7日登录次数',
+    `login_last_7d_day_count` BIGINT COMMENT '最近7日登录天数',
+    `login_last_30d_count` BIGINT COMMENT '最近30日登录次数',
+    `login_last_30d_day_count` BIGINT COMMENT '最近30日登录天数',
+    `login_count` BIGINT COMMENT '累积登录次数',
+    `login_day_count` BIGINT COMMENT '累积登录天数',
+    `order_date_first` STRING COMMENT '首次下单时间',
+    `order_date_last` STRING COMMENT '末次下单时间',
+    `order_last_1d_count` BIGINT COMMENT '最近1日下单次数',
+    `order_activity_last_1d_count` BIGINT COMMENT '最近1日订单参与活动次数',
+    `order_activity_reduce_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日订单减免金额(活动)',
+    `order_coupon_last_1d_count` BIGINT COMMENT '最近1日下单用券次数',
+    `order_coupon_reduce_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日订单减免金额(优惠券)',
+    `order_last_1d_original_amount` DECIMAL(16,2) COMMENT '最近1日原始下单金额',
+    `order_last_1d_final_amount` DECIMAL(16,2) COMMENT '最近1日最终下单金额',
+    `order_last_7d_count` BIGINT COMMENT '最近7日下单次数',
+    `order_activity_last_7d_count` BIGINT COMMENT '最近7日订单参与活动次数',
+    `order_activity_reduce_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日订单减免金额(活动)',
+    `order_coupon_last_7d_count` BIGINT COMMENT '最近7日下单用券次数',
+    `order_coupon_reduce_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日订单减免金额(优惠券)',
+    `order_last_7d_original_amount` DECIMAL(16,2) COMMENT '最近7日原始下单金额',
+    `order_last_7d_final_amount` DECIMAL(16,2) COMMENT '最近7日最终下单金额',
+    `order_last_30d_count` BIGINT COMMENT '最近30日下单次数',
+    `order_activity_last_30d_count` BIGINT COMMENT '最近30日订单参与活动次数',
+    `order_activity_reduce_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日订单减免金额(活动)',
+    `order_coupon_last_30d_count` BIGINT COMMENT '最近30日下单用券次数',
+    `order_coupon_reduce_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日订单减免金额(优惠券)',
+    `order_last_30d_original_amount` DECIMAL(16,2) COMMENT '最近30日原始下单金额',
+    `order_last_30d_final_amount` DECIMAL(16,2) COMMENT '最近30日最终下单金额',
+    `order_count` BIGINT COMMENT '累积下单次数',
+    `order_activity_count` BIGINT COMMENT '累积订单参与活动次数',
+    `order_activity_reduce_amount` DECIMAL(16,2) COMMENT '累积订单减免金额(活动)',
+    `order_coupon_count` BIGINT COMMENT '累积下单用券次数',
+    `order_coupon_reduce_amount` DECIMAL(16,2) COMMENT '累积订单减免金额(优惠券)',
+    `order_original_amount` DECIMAL(16,2) COMMENT '累积原始下单金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '累积最终下单金额',
+    `payment_date_first` STRING COMMENT '首次支付时间',
+    `payment_date_last` STRING COMMENT '末次支付时间',
+    `payment_last_1d_count` BIGINT COMMENT '最近1日支付次数',
+    `payment_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日支付金额',
+    `payment_last_7d_count` BIGINT COMMENT '最近7日支付次数',
+    `payment_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日支付金额',
+    `payment_last_30d_count` BIGINT COMMENT '最近30日支付次数',
+    `payment_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日支付金额',
+    `payment_count` BIGINT COMMENT '累积支付次数',
+    `payment_amount` DECIMAL(16,2) COMMENT '累积支付金额',
+    `refund_order_last_1d_count` BIGINT COMMENT '最近1日退单次数',
+    `refund_order_last_1d_num` BIGINT COMMENT '最近1日退单件数',
+    `refund_order_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日退单金额',
+    `refund_order_last_7d_count` BIGINT COMMENT '最近7日退单次数',
+    `refund_order_last_7d_num` BIGINT COMMENT '最近7日退单件数',
+    `refund_order_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日退单金额',
+    `refund_order_last_30d_count` BIGINT COMMENT '最近30日退单次数',
+    `refund_order_last_30d_num` BIGINT COMMENT '最近30日退单件数',
+    `refund_order_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日退单金额',
+    `refund_order_count` BIGINT COMMENT '累积退单次数',
+    `refund_order_num` BIGINT COMMENT '累积退单件数',
+    `refund_order_amount` DECIMAL(16,2) COMMENT '累积退单金额',
+    `refund_payment_last_1d_count` BIGINT COMMENT '最近1日退款次数',
+    `refund_payment_last_1d_num` BIGINT COMMENT '最近1日退款件数',
+    `refund_payment_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日退款金额',
+    `refund_payment_last_7d_count` BIGINT COMMENT '最近7日退款次数',
+    `refund_payment_last_7d_num` BIGINT COMMENT '最近7日退款件数',
+    `refund_payment_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日退款金额',
+    `refund_payment_last_30d_count` BIGINT COMMENT '最近30日退款次数',
+    `refund_payment_last_30d_num` BIGINT COMMENT '最近30日退款件数',
+    `refund_payment_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日退款金额',
+    `refund_payment_count` BIGINT COMMENT '累积退款次数',
+    `refund_payment_num` BIGINT COMMENT '累积退款件数',
+    `refund_payment_amount` DECIMAL(16,2) COMMENT '累积退款金额',
+    `cart_last_1d_count` BIGINT COMMENT '最近1日加入购物车次数',
+    `cart_last_7d_count` BIGINT COMMENT '最近7日加入购物车次数',
+    `cart_last_30d_count` BIGINT COMMENT '最近30日加入购物车次数',
+    `cart_count` BIGINT COMMENT '累积加入购物车次数',
+    `favor_last_1d_count` BIGINT COMMENT '最近1日收藏次数',
+    `favor_last_7d_count` BIGINT COMMENT '最近7日收藏次数',
+    `favor_last_30d_count` BIGINT COMMENT '最近30日收藏次数',
+    `favor_count` BIGINT COMMENT '累积收藏次数',
+    `coupon_last_1d_get_count` BIGINT COMMENT '最近1日领券次数',
+    `coupon_last_1d_using_count` BIGINT COMMENT '最近1日用券(下单)次数',
+    `coupon_last_1d_used_count` BIGINT COMMENT '最近1日用券(支付)次数',
+    `coupon_last_7d_get_count` BIGINT COMMENT '最近7日领券次数',
+    `coupon_last_7d_using_count` BIGINT COMMENT '最近7日用券(下单)次数',
+    `coupon_last_7d_used_count` BIGINT COMMENT '最近7日用券(支付)次数',
+    `coupon_last_30d_get_count` BIGINT COMMENT '最近30日领券次数',
+    `coupon_last_30d_using_count` BIGINT COMMENT '最近30日用券(下单)次数',
+    `coupon_last_30d_used_count` BIGINT COMMENT '最近30日用券(支付)次数',
+    `coupon_get_count` BIGINT COMMENT '累积领券次数',
+    `coupon_using_count` BIGINT COMMENT '累积用券(下单)次数',
+    `coupon_used_count` BIGINT COMMENT '累积用券(支付)次数',
+    `appraise_last_1d_good_count` BIGINT COMMENT '最近1日好评次数',
+    `appraise_last_1d_mid_count` BIGINT COMMENT '最近1日中评次数',
+    `appraise_last_1d_bad_count` BIGINT COMMENT '最近1日差评次数',
+    `appraise_last_1d_default_count` BIGINT COMMENT '最近1日默认评价次数',
+    `appraise_last_7d_good_count` BIGINT COMMENT '最近7日好评次数',
+    `appraise_last_7d_mid_count` BIGINT COMMENT '最近7日中评次数',
+    `appraise_last_7d_bad_count` BIGINT COMMENT '最近7日差评次数',
+    `appraise_last_7d_default_count` BIGINT COMMENT '最近7日默认评价次数',
+    `appraise_last_30d_good_count` BIGINT COMMENT '最近30日好评次数',
+    `appraise_last_30d_mid_count` BIGINT COMMENT '最近30日中评次数',
+    `appraise_last_30d_bad_count` BIGINT COMMENT '最近30日差评次数',
+    `appraise_last_30d_default_count` BIGINT COMMENT '最近30日默认评价次数',
+    `appraise_good_count` BIGINT COMMENT '累积好评次数',
+    `appraise_mid_count` BIGINT COMMENT '累积中评次数',
+    `appraise_bad_count` BIGINT COMMENT '累积差评次数',
+    `appraise_default_count` BIGINT COMMENT '累积默认评价次数'
+)COMMENT '会员主题宽表'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dwt/dwt_user_topic/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 商品主题
+DROP TABLE IF EXISTS dwt_sku_topic;
+CREATE EXTERNAL TABLE dwt_sku_topic
+(
+    `sku_id` STRING COMMENT 'sku_id',
+    `order_last_1d_count` BIGINT COMMENT '最近1日被下单次数',
+    `order_last_1d_num` BIGINT COMMENT '最近1日被下单件数',
+    `order_activity_last_1d_count` BIGINT COMMENT '最近1日参与活动被下单次数',
+    `order_coupon_last_1d_count` BIGINT COMMENT '最近1日使用优惠券被下单次数',
+    `order_activity_reduce_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日优惠金额(活动)',
+    `order_coupon_reduce_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日优惠金额(优惠券)',
+    `order_last_1d_original_amount` DECIMAL(16,2) COMMENT '最近1日被下单原始金额',
+    `order_last_1d_final_amount` DECIMAL(16,2) COMMENT '最近1日被下单最终金额',
+    `order_last_7d_count` BIGINT COMMENT '最近7日被下单次数',
+    `order_last_7d_num` BIGINT COMMENT '最近7日被下单件数',
+    `order_activity_last_7d_count` BIGINT COMMENT '最近7日参与活动被下单次数',
+    `order_coupon_last_7d_count` BIGINT COMMENT '最近7日使用优惠券被下单次数',
+    `order_activity_reduce_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日优惠金额(活动)',
+    `order_coupon_reduce_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日优惠金额(优惠券)',
+    `order_last_7d_original_amount` DECIMAL(16,2) COMMENT '最近7日被下单原始金额',
+    `order_last_7d_final_amount` DECIMAL(16,2) COMMENT '最近7日被下单最终金额',
+    `order_last_30d_count` BIGINT COMMENT '最近30日被下单次数',
+    `order_last_30d_num` BIGINT COMMENT '最近30日被下单件数',
+    `order_activity_last_30d_count` BIGINT COMMENT '最近30日参与活动被下单次数',
+    `order_coupon_last_30d_count` BIGINT COMMENT '最近30日使用优惠券被下单次数',
+    `order_activity_reduce_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日优惠金额(活动)',
+    `order_coupon_reduce_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日优惠金额(优惠券)',
+    `order_last_30d_original_amount` DECIMAL(16,2) COMMENT '最近30日被下单原始金额',
+    `order_last_30d_final_amount` DECIMAL(16,2) COMMENT '最近30日被下单最终金额',
+    `order_count` BIGINT COMMENT '累积被下单次数',
+    `order_num` BIGINT COMMENT '累积被下单件数',
+    `order_activity_count` BIGINT COMMENT '累积参与活动被下单次数',
+    `order_coupon_count` BIGINT COMMENT '累积使用优惠券被下单次数',
+    `order_activity_reduce_amount` DECIMAL(16,2) COMMENT '累积优惠金额(活动)',
+    `order_coupon_reduce_amount` DECIMAL(16,2) COMMENT '累积优惠金额(优惠券)',
+    `order_original_amount` DECIMAL(16,2) COMMENT '累积被下单原始金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '累积被下单最终金额',
+    `payment_last_1d_count` BIGINT COMMENT '最近1日被支付次数',
+    `payment_last_1d_num` BIGINT COMMENT '最近1日被支付件数',
+    `payment_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日被支付金额',
+    `payment_last_7d_count` BIGINT COMMENT '最近7日被支付次数',
+    `payment_last_7d_num` BIGINT COMMENT '最近7日被支付件数',
+    `payment_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日被支付金额',
+    `payment_last_30d_count` BIGINT COMMENT '最近30日被支付次数',
+    `payment_last_30d_num` BIGINT COMMENT '最近30日被支付件数',
+    `payment_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日被支付金额',
+    `payment_count` BIGINT COMMENT '累积被支付次数',
+    `payment_num` BIGINT COMMENT '累积被支付件数',
+    `payment_amount` DECIMAL(16,2) COMMENT '累积被支付金额',
+    `refund_order_last_1d_count` BIGINT COMMENT '最近1日退单次数',
+    `refund_order_last_1d_num` BIGINT COMMENT '最近1日退单件数',
+    `refund_order_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日退单金额',
+    `refund_order_last_7d_count` BIGINT COMMENT '最近7日退单次数',
+    `refund_order_last_7d_num` BIGINT COMMENT '最近7日退单件数',
+    `refund_order_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日退单金额',
+    `refund_order_last_30d_count` BIGINT COMMENT '最近30日退单次数',
+    `refund_order_last_30d_num` BIGINT COMMENT '最近30日退单件数',
+    `refund_order_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日退单金额',
+    `refund_order_count` BIGINT COMMENT '累积退单次数',
+    `refund_order_num` BIGINT COMMENT '累积退单件数',
+    `refund_order_amount` DECIMAL(16,2) COMMENT '累积退单金额',
+    `refund_payment_last_1d_count` BIGINT COMMENT '最近1日退款次数',
+    `refund_payment_last_1d_num` BIGINT COMMENT '最近1日退款件数',
+    `refund_payment_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日退款金额',
+    `refund_payment_last_7d_count` BIGINT COMMENT '最近7日退款次数',
+    `refund_payment_last_7d_num` BIGINT COMMENT '最近7日退款件数',
+    `refund_payment_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日退款金额',
+    `refund_payment_last_30d_count` BIGINT COMMENT '最近30日退款次数',
+    `refund_payment_last_30d_num` BIGINT COMMENT '最近30日退款件数',
+    `refund_payment_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日退款金额',
+    `refund_payment_count` BIGINT COMMENT '累积退款次数',
+    `refund_payment_num` BIGINT COMMENT '累积退款件数',
+    `refund_payment_amount` DECIMAL(16,2) COMMENT '累积退款金额',
+    `cart_last_1d_count` BIGINT COMMENT '最近1日被加入购物车次数',
+    `cart_last_7d_count` BIGINT COMMENT '最近7日被加入购物车次数',
+    `cart_last_30d_count` BIGINT COMMENT '最近30日被加入购物车次数',
+    `cart_count` BIGINT COMMENT '累积被加入购物车次数',
+    `favor_last_1d_count` BIGINT COMMENT '最近1日被收藏次数',
+    `favor_last_7d_count` BIGINT COMMENT '最近7日被收藏次数',
+    `favor_last_30d_count` BIGINT COMMENT '最近30日被收藏次数',
+    `favor_count` BIGINT COMMENT '累积被收藏次数',
+    `appraise_last_1d_good_count` BIGINT COMMENT '最近1日好评数',
+    `appraise_last_1d_mid_count` BIGINT COMMENT '最近1日中评数',
+    `appraise_last_1d_bad_count` BIGINT COMMENT '最近1日差评数',
+    `appraise_last_1d_default_count` BIGINT COMMENT '最近1日默认评价数',
+    `appraise_last_7d_good_count` BIGINT COMMENT '最近7日好评数',
+    `appraise_last_7d_mid_count` BIGINT COMMENT '最近7日中评数',
+    `appraise_last_7d_bad_count` BIGINT COMMENT '最近7日差评数',
+    `appraise_last_7d_default_count` BIGINT COMMENT '最近7日默认评价数',
+    `appraise_last_30d_good_count` BIGINT COMMENT '最近30日好评数',
+    `appraise_last_30d_mid_count` BIGINT COMMENT '最近30日中评数',
+    `appraise_last_30d_bad_count` BIGINT COMMENT '最近30日差评数',
+    `appraise_last_30d_default_count` BIGINT COMMENT '最近30日默认评价数',
+    `appraise_good_count` BIGINT COMMENT '累积好评数',
+    `appraise_mid_count` BIGINT COMMENT '累积中评数',
+    `appraise_bad_count` BIGINT COMMENT '累积差评数',
+    `appraise_default_count` BIGINT COMMENT '累积默认评价数'
+ )COMMENT '商品主题宽表'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dwt/dwt_sku_topic/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 优惠券
+DROP TABLE IF EXISTS dwt_coupon_topic;
+CREATE EXTERNAL TABLE dwt_coupon_topic(
+    `coupon_id` STRING COMMENT '优惠券ID',
+    `get_last_1d_count` BIGINT COMMENT '最近1日领取次数',
+    `get_last_7d_count` BIGINT COMMENT '最近7日领取次数',
+    `get_last_30d_count` BIGINT COMMENT '最近30日领取次数',
+    `get_count` BIGINT COMMENT '累积领取次数',
+    `order_last_1d_count` BIGINT COMMENT '最近1日使用某券下单次数',
+    `order_last_1d_reduce_amount` DECIMAL(16,2) COMMENT '最近1日使用某券下单优惠金额',
+    `order_last_1d_original_amount` DECIMAL(16,2) COMMENT '最近1日使用某券下单原始金额',
+    `order_last_1d_final_amount` DECIMAL(16,2) COMMENT '最近1日使用某券下单最终金额',
+    `order_last_7d_count` BIGINT COMMENT '最近7日使用某券下单次数',
+    `order_last_7d_reduce_amount` DECIMAL(16,2) COMMENT '最近7日使用某券下单优惠金额',
+    `order_last_7d_original_amount` DECIMAL(16,2) COMMENT '最近7日使用某券下单原始金额',
+    `order_last_7d_final_amount` DECIMAL(16,2) COMMENT '最近7日使用某券下单最终金额',
+    `order_last_30d_count` BIGINT COMMENT '最近30日使用某券下单次数',
+    `order_last_30d_reduce_amount` DECIMAL(16,2) COMMENT '最近30日使用某券下单优惠金额',
+    `order_last_30d_original_amount` DECIMAL(16,2) COMMENT '最近30日使用某券下单原始金额',
+    `order_last_30d_final_amount` DECIMAL(16,2) COMMENT '最近30日使用某券下单最终金额',
+    `order_count` BIGINT COMMENT '累积使用(下单)次数',
+    `order_reduce_amount` DECIMAL(16,2) COMMENT '使用某券累积下单优惠金额',
+    `order_original_amount` DECIMAL(16,2) COMMENT '使用某券累积下单原始金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '使用某券累积下单最终金额',
+    `payment_last_1d_count` BIGINT COMMENT '最近1日使用某券支付次数',
+    `payment_last_1d_reduce_amount` DECIMAL(16,2) COMMENT '最近1日使用某券优惠金额',
+    `payment_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日使用某券支付金额',
+    `payment_last_7d_count` BIGINT COMMENT '最近7日使用某券支付次数',
+    `payment_last_7d_reduce_amount` DECIMAL(16,2) COMMENT '最近7日使用某券优惠金额',
+    `payment_last_7d_amount` DECIMAL(16,2) COMMENT '最近7日使用某券支付金额',
+    `payment_last_30d_count` BIGINT COMMENT '最近30日使用某券支付次数',
+    `payment_last_30d_reduce_amount` DECIMAL(16,2) COMMENT '最近30日使用某券优惠金额',
+    `payment_last_30d_amount` DECIMAL(16,2) COMMENT '最近30日使用某券支付金额',
+    `payment_count` BIGINT COMMENT '累积使用(支付)次数',
+    `payment_reduce_amount` DECIMAL(16,2) COMMENT '使用某券累积优惠金额',
+    `payment_amount` DECIMAL(16,2) COMMENT '使用某券累积支付金额',
+    `expire_last_1d_count` BIGINT COMMENT '最近1日过期次数',
+    `expire_last_7d_count` BIGINT COMMENT '最近7日过期次数',
+    `expire_last_30d_count` BIGINT COMMENT '最近30日过期次数',
+    `expire_count` BIGINT COMMENT '累积过期次数'
+)comment '优惠券主题表'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dwt/dwt_coupon_topic/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 活动
+DROP TABLE IF EXISTS dwt_activity_topic;
+CREATE EXTERNAL TABLE dwt_activity_topic(
+    `activity_rule_id` STRING COMMENT '活动规则ID',
+    `activity_id` STRING  COMMENT '活动ID',
+    `order_last_1d_count` BIGINT COMMENT '最近1日参与某活动某规则下单次数',
+    `order_last_1d_reduce_amount` DECIMAL(16,2) COMMENT '最近1日参与某活动某规则下单优惠金额',
+    `order_last_1d_original_amount` DECIMAL(16,2) COMMENT '最近1日参与某活动某规则下单原始金额',
+    `order_last_1d_final_amount` DECIMAL(16,2) COMMENT '最近1日参与某活动某规则下单最终金额',
+    `order_count` BIGINT COMMENT '参与某活动某规则累积下单次数',
+    `order_reduce_amount` DECIMAL(16,2) COMMENT '参与某活动某规则累积下单优惠金额',
+    `order_original_amount` DECIMAL(16,2) COMMENT '参与某活动某规则累积下单原始金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '参与某活动某规则累积下单最终金额',
+    `payment_last_1d_count` BIGINT COMMENT '最近1日参与某活动某规则支付次数',
+    `payment_last_1d_reduce_amount` DECIMAL(16,2) COMMENT '最近1日参与某活动某规则支付优惠金额',
+    `payment_last_1d_amount` DECIMAL(16,2) COMMENT '最近1日参与某活动某规则支付金额',
+    `payment_count` BIGINT COMMENT '参与某活动某规则累积支付次数',
+    `payment_reduce_amount` DECIMAL(16,2) COMMENT '参与某活动某规则累积支付优惠金额',
+    `payment_amount` DECIMAL(16,2) COMMENT '参与某活动某规则累积支付金额'
+) COMMENT '活动主题宽表'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dwt/dwt_activity_topic/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+
+-- 地区
+DROP TABLE IF EXISTS dwt_area_topic;
+CREATE EXTERNAL TABLE dwt_area_topic(
+    `province_id` STRING COMMENT '编号',
+    `visit_last_1d_count` BIGINT COMMENT '最近1日访客访问次数',
+    `login_last_1d_count` BIGINT COMMENT '最近1日用户访问次数',
+    `visit_last_7d_count` BIGINT COMMENT '最近7访客访问次数',
+    `login_last_7d_count` BIGINT COMMENT '最近7日用户访问次数',
+    `visit_last_30d_count` BIGINT COMMENT '最近30日访客访问次数',
+    `login_last_30d_count` BIGINT COMMENT '最近30日用户访问次数',
+    `visit_count` BIGINT COMMENT '累积访客访问次数',
+    `login_count` BIGINT COMMENT '累积用户访问次数',
+    `order_last_1d_count` BIGINT COMMENT '最近1天下单次数',
+    `order_last_1d_original_amount` DECIMAL(16,2) COMMENT '最近1天下单原始金额',
+    `order_last_1d_final_amount` DECIMAL(16,2) COMMENT '最近1天下单最终金额',
+    `order_last_7d_count` BIGINT COMMENT '最近7天下单次数',
+    `order_last_7d_original_amount` DECIMAL(16,2) COMMENT '最近7天下单原始金额',
+    `order_last_7d_final_amount` DECIMAL(16,2) COMMENT '最近7天下单最终金额',
+    `order_last_30d_count` BIGINT COMMENT '最近30天下单次数',
+    `order_last_30d_original_amount` DECIMAL(16,2) COMMENT '最近30天下单原始金额',
+    `order_last_30d_final_amount` DECIMAL(16,2) COMMENT '最近30天下单最终金额',
+    `order_count` BIGINT COMMENT '累积下单次数',
+    `order_original_amount` DECIMAL(16,2) COMMENT '累积下单原始金额',
+    `order_final_amount` DECIMAL(16,2) COMMENT '累积下单最终金额',
+    `payment_last_1d_count` BIGINT COMMENT '最近1天支付次数',
+    `payment_last_1d_amount` DECIMAL(16,2) COMMENT '最近1天支付金额',
+    `payment_last_7d_count` BIGINT COMMENT '最近7天支付次数',
+    `payment_last_7d_amount` DECIMAL(16,2) COMMENT '最近7天支付金额',
+    `payment_last_30d_count` BIGINT COMMENT '最近30天支付次数',
+    `payment_last_30d_amount` DECIMAL(16,2) COMMENT '最近30天支付金额',
+    `payment_count` BIGINT COMMENT '累积支付次数',
+    `payment_amount` DECIMAL(16,2) COMMENT '累积支付金额',
+    `refund_order_last_1d_count` BIGINT COMMENT '最近1天退单次数',
+    `refund_order_last_1d_amount` DECIMAL(16,2) COMMENT '最近1天退单金额',
+    `refund_order_last_7d_count` BIGINT COMMENT '最近7天退单次数',
+    `refund_order_last_7d_amount` DECIMAL(16,2) COMMENT '最近7天退单金额',
+    `refund_order_last_30d_count` BIGINT COMMENT '最近30天退单次数',
+    `refund_order_last_30d_amount` DECIMAL(16,2) COMMENT '最近30天退单金额',
+    `refund_order_count` BIGINT COMMENT '累积退单次数',
+    `refund_order_amount` DECIMAL(16,2) COMMENT '累积退单金额',
+    `refund_payment_last_1d_count` BIGINT COMMENT '最近1天退款次数',
+    `refund_payment_last_1d_amount` DECIMAL(16,2) COMMENT '最近1天退款金额',
+    `refund_payment_last_7d_count` BIGINT COMMENT '最近7天退款次数',
+    `refund_payment_last_7d_amount` DECIMAL(16,2) COMMENT '最近7天退款金额',
+    `refund_payment_last_30d_count` BIGINT COMMENT '最近30天退款次数',
+    `refund_payment_last_30d_amount` DECIMAL(16,2) COMMENT '最近30天退款金额',
+    `refund_payment_count` BIGINT COMMENT '累积退款次数',
+    `refund_payment_amount` DECIMAL(16,2) COMMENT '累积退款金额'
+) COMMENT '地区主题宽表'
+PARTITIONED BY (`dt` STRING)
+STORED AS PARQUET
+LOCATION '/warehouse/gmall/dwt/dwt_area_topic/'
+TBLPROPERTIES ("parquet.compression"="lzo");
+```
+
+
+
+#### 数据加载脚本
+
+##### 首日
+
+编辑脚本
+
+vi bin/dws_to_dwt_init.sh
+
+```shell
+#!/bin/bash
+
+APP=gmall
+
+if [ -n "$2" ] ;then
+   do_date=$2
+else 
+   echo "请传入日期参数"
+   exit
+fi 
+
+dwt_visitor_topic="
+insert overwrite table ${APP}.dwt_visitor_topic partition(dt='$do_date')
+select
+    nvl(1d_ago.mid_id,old.mid_id),
+    nvl(1d_ago.brand,old.brand),
+    nvl(1d_ago.model,old.model),
+    nvl(1d_ago.channel,old.channel),
+    nvl(1d_ago.os,old.os),
+    nvl(1d_ago.area_code,old.area_code),
+    nvl(1d_ago.version_code,old.version_code),
+    case when old.mid_id is null and 1d_ago.is_new=1 then '$do_date'
+         when old.mid_id is null and 1d_ago.is_new=0 then '2020-06-13'--无法获取准确的首次登录日期，给定一个数仓搭建日之前的日期
+         else old.visit_date_first end,
+    if(1d_ago.mid_id is not null,'$do_date',old.visit_date_last),
+    nvl(1d_ago.visit_count,0),
+    if(1d_ago.mid_id is null,0,1),
+    nvl(old.visit_last_7d_count,0)+nvl(1d_ago.visit_count,0)- nvl(7d_ago.visit_count,0),
+    nvl(old.visit_last_7d_day_count,0)+if(1d_ago.mid_id is null,0,1)- if(7d_ago.mid_id is null,0,1),
+    nvl(old.visit_last_30d_count,0)+nvl(1d_ago.visit_count,0)- nvl(30d_ago.visit_count,0),
+    nvl(old.visit_last_30d_day_count,0)+if(1d_ago.mid_id is null,0,1)- if(30d_ago.mid_id is null,0,1),
+    nvl(old.visit_count,0)+nvl(1d_ago.visit_count,0),
+    nvl(old.visit_day_count,0)+if(1d_ago.mid_id is null,0,1)
+from
+(
+    select
+        mid_id,
+        brand,
+        model,
+        channel,
+        os,
+        area_code,
+        version_code,
+        visit_date_first,
+        visit_date_last,
+        visit_last_1d_count,
+        visit_last_1d_day_count,
+        visit_last_7d_count,
+        visit_last_7d_day_count,
+        visit_last_30d_count,
+        visit_last_30d_day_count,
+        visit_count,
+        visit_day_count
+    from ${APP}.dwt_visitor_topic
+    where dt=date_add('$do_date',-1)
+)old
+full outer join
+(
+    select
+        mid_id,
+        brand,
+        model,
+        is_new,
+        channel,
+        os,
+        area_code,
+        version_code,
+        visit_count
+    from ${APP}.dws_visitor_action_daycount
+    where dt='$do_date'
+)1d_ago
+on old.mid_id=1d_ago.mid_id
+left join
+(
+    select
+        mid_id,
+        brand,
+        model,
+        is_new,
+        channel,
+        os,
+        area_code,
+        version_code,
+        visit_count
+    from ${APP}.dws_visitor_action_daycount
+    where dt=date_add('$do_date',-7)
+)7d_ago
+on old.mid_id=7d_ago.mid_id
+left join
+(
+    select
+        mid_id,
+        brand,
+        model,
+        is_new,
+        channel,
+        os,
+        area_code,
+        version_code,
+        visit_count
+    from ${APP}.dws_visitor_action_daycount
+    where dt=date_add('$do_date',-30)
+)30d_ago
+on old.mid_id=30d_ago.mid_id;
+"
+
+dwt_user_topic="
+insert overwrite table ${APP}.dwt_user_topic partition(dt='$do_date')
+select
+    id,
+    login_date_first,--以用户的创建日期作为首次登录日期
+    nvl(login_date_last,date_add('$do_date',-1)),--若有历史登录记录，则根据历史记录获取末次登录日期，否则统一指定一个日期
+    nvl(login_last_1d_count,0),
+    nvl(login_last_1d_day_count,0),
+    nvl(login_last_7d_count,0),
+    nvl(login_last_7d_day_count,0),
+    nvl(login_last_30d_count,0),
+    nvl(login_last_30d_day_count,0),
+    nvl(login_count,0),
+    nvl(login_day_count,0),
+    order_date_first,
+    order_date_last,
+    nvl(order_last_1d_count,0),
+    nvl(order_activity_last_1d_count,0),
+    nvl(order_activity_reduce_last_1d_amount,0),
+    nvl(order_coupon_last_1d_count,0),
+    nvl(order_coupon_reduce_last_1d_amount,0),
+    nvl(order_last_1d_original_amount,0),
+    nvl(order_last_1d_final_amount,0),
+    nvl(order_last_7d_count,0),
+    nvl(order_activity_last_7d_count,0),
+    nvl(order_activity_reduce_last_7d_amount,0),
+    nvl(order_coupon_last_7d_count,0),
+    nvl(order_coupon_reduce_last_7d_amount,0),
+    nvl(order_last_7d_original_amount,0),
+    nvl(order_last_7d_final_amount,0),
+    nvl(order_last_30d_count,0),
+    nvl(order_activity_last_30d_count,0),
+    nvl(order_activity_reduce_last_30d_amount,0),
+    nvl(order_coupon_last_30d_count,0),
+    nvl(order_coupon_reduce_last_30d_amount,0),
+    nvl(order_last_30d_original_amount,0),
+    nvl(order_last_30d_final_amount,0),
+    nvl(order_count,0),
+    nvl(order_activity_count,0),
+    nvl(order_activity_reduce_amount,0),
+    nvl(order_coupon_count,0),
+    nvl(order_coupon_reduce_amount,0),
+    nvl(order_original_amount,0),
+    nvl(order_final_amount,0),
+    payment_date_first,
+    payment_date_last,
+    nvl(payment_last_1d_count,0),
+    nvl(payment_last_1d_amount,0),
+    nvl(payment_last_7d_count,0),
+    nvl(payment_last_7d_amount,0),
+    nvl(payment_last_30d_count,0),
+    nvl(payment_last_30d_amount,0),
+    nvl(payment_count,0),
+    nvl(payment_amount,0),
+    nvl(refund_order_last_1d_count,0),
+    nvl(refund_order_last_1d_num,0),
+    nvl(refund_order_last_1d_amount,0),
+    nvl(refund_order_last_7d_count,0),
+    nvl(refund_order_last_7d_num,0),
+    nvl(refund_order_last_7d_amount,0),
+    nvl(refund_order_last_30d_count,0),
+    nvl(refund_order_last_30d_num,0),
+    nvl(refund_order_last_30d_amount,0),
+    nvl(refund_order_count,0),
+    nvl(refund_order_num,0),
+    nvl(refund_order_amount,0),
+    nvl(refund_payment_last_1d_count,0),
+    nvl(refund_payment_last_1d_num,0),
+    nvl(refund_payment_last_1d_amount,0),
+    nvl(refund_payment_last_7d_count,0),
+    nvl(refund_payment_last_7d_num,0),
+    nvl(refund_payment_last_7d_amount,0),
+    nvl(refund_payment_last_30d_count,0),
+    nvl(refund_payment_last_30d_num,0),
+    nvl(refund_payment_last_30d_amount,0),
+    nvl(refund_payment_count,0),
+    nvl(refund_payment_num,0),
+    nvl(refund_payment_amount,0),
+    nvl(cart_last_1d_count,0),
+    nvl(cart_last_7d_count,0),
+    nvl(cart_last_30d_count,0),
+    nvl(cart_count,0),
+    nvl(favor_last_1d_count,0),
+    nvl(favor_last_7d_count,0),
+    nvl(favor_last_30d_count,0),
+    nvl(favor_count,0),
+    nvl(coupon_last_1d_get_count,0),
+    nvl(coupon_last_1d_using_count,0),
+    nvl(coupon_last_1d_used_count,0),
+    nvl(coupon_last_7d_get_count,0),
+    nvl(coupon_last_7d_using_count,0),
+    nvl(coupon_last_7d_used_count,0),
+    nvl(coupon_last_30d_get_count,0),
+    nvl(coupon_last_30d_using_count,0),
+    nvl(coupon_last_30d_used_count,0),
+    nvl(coupon_get_count,0),
+    nvl(coupon_using_count,0),
+    nvl(coupon_used_count,0),
+    nvl(appraise_last_1d_good_count,0),
+    nvl(appraise_last_1d_mid_count,0),
+    nvl(appraise_last_1d_bad_count,0),
+    nvl(appraise_last_1d_default_count,0),
+    nvl(appraise_last_7d_good_count,0),
+    nvl(appraise_last_7d_mid_count,0),
+    nvl(appraise_last_7d_bad_count,0),
+    nvl(appraise_last_7d_default_count,0),
+    nvl(appraise_last_30d_good_count,0),
+    nvl(appraise_last_30d_mid_count,0),
+    nvl(appraise_last_30d_bad_count,0),
+    nvl(appraise_last_30d_default_count,0),
+    nvl(appraise_good_count,0),
+    nvl(appraise_mid_count,0),
+    nvl(appraise_bad_count,0),
+    nvl(appraise_default_count,0)
+from
+(
+    select
+        id,
+        date_format(create_time,'yyyy-MM-dd') login_date_first
+    from ${APP}.dim_user_info
+    where dt='9999-99-99'
+)t1
+left join
+(
+    select
+        user_id user_id,
+        max(dt) login_date_last,
+        sum(if(dt='$do_date',login_count,0)) login_last_1d_count,
+        sum(if(dt='$do_date' and login_count>0,1,0)) login_last_1d_day_count,
+        sum(if(dt>=date_add('$do_date',-6),login_count,0)) login_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6) and login_count>0,1,0)) login_last_7d_day_count,
+        sum(if(dt>=date_add('$do_date',-29),login_count,0)) login_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29) and login_count>0,1,0)) login_last_30d_day_count,
+        sum(login_count) login_count,
+        sum(if(login_count>0,1,0)) login_day_count,
+        min(if(order_count>0,dt,null)) order_date_first,
+        max(if(order_count>0,dt,null)) order_date_last,
+        sum(if(dt='$do_date',order_count,0)) order_last_1d_count,
+        sum(if(dt='$do_date',order_activity_count,0)) order_activity_last_1d_count,
+        sum(if(dt='$do_date',order_activity_reduce_amount,0)) order_activity_reduce_last_1d_amount,
+        sum(if(dt='$do_date',order_coupon_count,0)) order_coupon_last_1d_count,
+        sum(if(dt='$do_date',order_coupon_reduce_amount,0)) order_coupon_reduce_last_1d_amount,
+        sum(if(dt='$do_date',order_original_amount,0)) order_last_1d_original_amount,
+        sum(if(dt='$do_date',order_final_amount,0)) order_last_1d_final_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_count,0)) order_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),order_activity_count,0)) order_activity_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),order_activity_reduce_amount,0)) order_activity_reduce_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_coupon_count,0)) order_coupon_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),order_coupon_reduce_amount,0)) order_coupon_reduce_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_original_amount,0)) order_last_7d_original_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_final_amount,0)) order_last_7d_final_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_count,0)) order_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),order_activity_count,0)) order_activity_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),order_activity_reduce_amount,0)) order_activity_reduce_last_30d_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_coupon_count,0)) order_coupon_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),order_coupon_reduce_amount,0)) order_coupon_reduce_last_30d_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_original_amount,0)) order_last_30d_original_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_final_amount,0)) order_last_30d_final_amount,
+        sum(order_count) order_count,
+        sum(order_activity_count) order_activity_count,
+        sum(order_activity_reduce_amount) order_activity_reduce_amount,
+        sum(order_coupon_count) order_coupon_count,
+        sum(order_coupon_reduce_amount) order_coupon_reduce_amount,
+        sum(order_original_amount) order_original_amount,
+        sum(order_final_amount) order_final_amount,
+        min(if(payment_count>0,dt,null)) payment_date_first,
+        max(if(payment_count>0,dt,null)) payment_date_last,
+        sum(if(dt='$do_date',payment_count,0)) payment_last_1d_count,
+        sum(if(dt='$do_date',payment_amount,0)) payment_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),payment_count,0)) payment_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),payment_amount,0)) payment_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),payment_count,0)) payment_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),payment_amount,0)) payment_last_30d_amount,
+        sum(payment_count) payment_count,
+        sum(payment_amount) payment_amount,
+        sum(if(dt='$do_date',refund_order_count,0)) refund_order_last_1d_count,
+        sum(if(dt='$do_date',refund_order_num,0)) refund_order_last_1d_num,
+        sum(if(dt='$do_date',refund_order_amount,0)) refund_order_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),refund_order_count,0)) refund_order_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),refund_order_num,0)) refund_order_last_7d_num,
+        sum(if(dt>=date_add('$do_date',-6),refund_order_amount,0)) refund_order_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),refund_order_count,0)) refund_order_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),refund_order_num,0)) refund_order_last_30d_num,
+        sum(if(dt>=date_add('$do_date',-29),refund_order_amount,0)) refund_order_last_30d_amount,
+        sum(refund_order_count) refund_order_count,
+        sum(refund_order_num) refund_order_num,
+        sum(refund_order_amount) refund_order_amount,
+        sum(if(dt='$do_date',refund_payment_count,0)) refund_payment_last_1d_count,
+        sum(if(dt='$do_date',refund_payment_num,0)) refund_payment_last_1d_num,
+        sum(if(dt='$do_date',refund_payment_amount,0)) refund_payment_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),refund_payment_count,0)) refund_payment_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),refund_payment_num,0)) refund_payment_last_7d_num,
+        sum(if(dt>=date_add('$do_date',-6),refund_payment_amount,0)) refund_payment_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),refund_payment_count,0)) refund_payment_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),refund_payment_num,0)) refund_payment_last_30d_num,
+        sum(if(dt>=date_add('$do_date',-29),refund_payment_amount,0)) refund_payment_last_30d_amount,
+        sum(refund_payment_count) refund_payment_count,
+        sum(refund_payment_num) refund_payment_num,
+        sum(refund_payment_amount) refund_payment_amount,
+        sum(if(dt='$do_date',cart_count,0)) cart_last_1d_count,
+        sum(if(dt>=date_add('$do_date',-6),cart_count,0)) cart_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-29),cart_count,0)) cart_last_30d_count,
+        sum(cart_count) cart_count,
+        sum(if(dt='$do_date',favor_count,0)) favor_last_1d_count,
+        sum(if(dt>=date_add('$do_date',-6),favor_count,0)) favor_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-29),favor_count,0)) favor_last_30d_count,
+        sum(favor_count) favor_count,
+        sum(if(dt='$do_date',coupon_get_count,0)) coupon_last_1d_get_count,
+        sum(if(dt='$do_date',coupon_using_count,0)) coupon_last_1d_using_count,
+        sum(if(dt='$do_date',coupon_used_count,0)) coupon_last_1d_used_count,
+        sum(if(dt>=date_add('$do_date',-6),coupon_get_count,0)) coupon_last_7d_get_count,
+        sum(if(dt>=date_add('$do_date',-6),coupon_using_count,0)) coupon_last_7d_using_count,
+        sum(if(dt>=date_add('$do_date',-6),coupon_used_count,0)) coupon_last_7d_used_count,
+        sum(if(dt>=date_add('$do_date',-29),coupon_get_count,0)) coupon_last_30d_get_count,
+        sum(if(dt>=date_add('$do_date',-29),coupon_using_count,0)) coupon_last_30d_using_count,
+        sum(if(dt>=date_add('$do_date',-29),coupon_used_count,0)) coupon_last_30d_used_count,
+        sum(coupon_get_count) coupon_get_count,
+        sum(coupon_using_count) coupon_using_count,
+        sum(coupon_used_count) coupon_used_count,
+        sum(if(dt='$do_date',appraise_good_count,0)) appraise_last_1d_good_count,
+        sum(if(dt='$do_date',appraise_mid_count,0)) appraise_last_1d_mid_count,
+        sum(if(dt='$do_date',appraise_bad_count,0)) appraise_last_1d_bad_count,
+        sum(if(dt='$do_date',appraise_default_count,0)) appraise_last_1d_default_count,
+        sum(if(dt>=date_add('$do_date',-6),appraise_good_count,0)) appraise_last_7d_good_count,
+        sum(if(dt>=date_add('$do_date',-6),appraise_mid_count,0)) appraise_last_7d_mid_count,
+        sum(if(dt>=date_add('$do_date',-6),appraise_bad_count,0)) appraise_last_7d_bad_count,
+        sum(if(dt>=date_add('$do_date',-6),appraise_default_count,0)) appraise_last_7d_default_count,
+        sum(if(dt>=date_add('$do_date',-29),appraise_good_count,0)) appraise_last_30d_good_count,
+        sum(if(dt>=date_add('$do_date',-29),appraise_mid_count,0)) appraise_last_30d_mid_count,
+        sum(if(dt>=date_add('$do_date',-29),appraise_bad_count,0)) appraise_last_30d_bad_count,
+        sum(if(dt>=date_add('$do_date',-29),appraise_default_count,0)) appraise_last_30d_default_count,
+        sum(appraise_good_count) appraise_good_count,
+        sum(appraise_mid_count) appraise_mid_count,
+        sum(appraise_bad_count) appraise_bad_count,
+        sum(appraise_default_count) appraise_default_count
+    from ${APP}.dws_user_action_daycount
+    group by user_id
+)t2
+on t1.id=t2.user_id;
+"
+
+dwt_sku_topic="
+insert overwrite table ${APP}.dwt_sku_topic partition(dt='$do_date')
+select
+    id,
+    nvl(order_last_1d_count,0),
+    nvl(order_last_1d_num,0),
+    nvl(order_activity_last_1d_count,0),
+    nvl(order_coupon_last_1d_count,0),
+    nvl(order_activity_reduce_last_1d_amount,0),
+    nvl(order_coupon_reduce_last_1d_amount,0),
+    nvl(order_last_1d_original_amount,0),
+    nvl(order_last_1d_final_amount,0),
+    nvl(order_last_7d_count,0),
+    nvl(order_last_7d_num,0),
+    nvl(order_activity_last_7d_count,0),
+    nvl(order_coupon_last_7d_count,0),
+    nvl(order_activity_reduce_last_7d_amount,0),
+    nvl(order_coupon_reduce_last_7d_amount,0),
+    nvl(order_last_7d_original_amount,0),
+    nvl(order_last_7d_final_amount,0),
+    nvl(order_last_30d_count,0),
+    nvl(order_last_30d_num,0),
+    nvl(order_activity_last_30d_count,0),
+    nvl(order_coupon_last_30d_count,0),
+    nvl(order_activity_reduce_last_30d_amount,0),
+    nvl(order_coupon_reduce_last_30d_amount,0),
+    nvl(order_last_30d_original_amount,0),
+    nvl(order_last_30d_final_amount,0),
+    nvl(order_count,0),
+    nvl(order_num,0),
+    nvl(order_activity_count,0),
+    nvl(order_coupon_count,0),
+    nvl(order_activity_reduce_amount,0),
+    nvl(order_coupon_reduce_amount,0),
+    nvl(order_original_amount,0),
+    nvl(order_final_amount,0),
+    nvl(payment_last_1d_count,0),
+    nvl(payment_last_1d_num,0),
+    nvl(payment_last_1d_amount,0),
+    nvl(payment_last_7d_count,0),
+    nvl(payment_last_7d_num,0),
+    nvl(payment_last_7d_amount,0),
+    nvl(payment_last_30d_count,0),
+    nvl(payment_last_30d_num,0),
+    nvl(payment_last_30d_amount,0),
+    nvl(payment_count,0),
+    nvl(payment_num,0),
+    nvl(payment_amount,0),
+    nvl(refund_order_last_1d_count,0),
+    nvl(refund_order_last_1d_num,0),
+    nvl(refund_order_last_1d_amount,0),
+    nvl(refund_order_last_7d_count,0),
+    nvl(refund_order_last_7d_num,0),
+    nvl(refund_order_last_7d_amount,0),
+    nvl(refund_order_last_30d_count,0),
+    nvl(refund_order_last_30d_num,0),
+    nvl(refund_order_last_30d_amount,0),
+    nvl(refund_order_count,0),
+    nvl(refund_order_num,0),
+    nvl(refund_order_amount,0),
+    nvl(refund_payment_last_1d_count,0),
+    nvl(refund_payment_last_1d_num,0),
+    nvl(refund_payment_last_1d_amount,0),
+    nvl(refund_payment_last_7d_count,0),
+    nvl(refund_payment_last_7d_num,0),
+    nvl(refund_payment_last_7d_amount,0),
+    nvl(refund_payment_last_30d_count,0),
+    nvl(refund_payment_last_30d_num,0),
+    nvl(refund_payment_last_30d_amount,0),
+    nvl(refund_payment_count,0),
+    nvl(refund_payment_num,0),
+    nvl(refund_payment_amount,0),
+    nvl(cart_last_1d_count,0),
+    nvl(cart_last_7d_count,0),
+    nvl(cart_last_30d_count,0),
+    nvl(cart_count,0),
+    nvl(favor_last_1d_count,0),
+    nvl(favor_last_7d_count,0),
+    nvl(favor_last_30d_count,0),
+    nvl(favor_count,0),
+    nvl(appraise_last_1d_good_count,0),
+    nvl(appraise_last_1d_mid_count,0),
+    nvl(appraise_last_1d_bad_count,0),
+    nvl(appraise_last_1d_default_count,0),
+    nvl(appraise_last_7d_good_count,0),
+    nvl(appraise_last_7d_mid_count,0),
+    nvl(appraise_last_7d_bad_count,0),
+    nvl(appraise_last_7d_default_count,0),
+    nvl(appraise_last_30d_good_count,0),
+    nvl(appraise_last_30d_mid_count,0),
+    nvl(appraise_last_30d_bad_count,0),
+    nvl(appraise_last_30d_default_count,0),
+    nvl(appraise_good_count,0),
+    nvl(appraise_mid_count,0),
+    nvl(appraise_bad_count,0),
+    nvl(appraise_default_count,0)
+from
+(
+    select
+        id
+    from ${APP}.dim_sku_info
+    where dt='$do_date'
+)t1
+left join
+(
+    select
+        sku_id,
+        sum(if(dt='$do_date',order_count,0)) order_last_1d_count,
+        sum(if(dt='$do_date',order_num,0)) order_last_1d_num,
+        sum(if(dt='$do_date',order_activity_count,0)) order_activity_last_1d_count,
+        sum(if(dt='$do_date',order_coupon_count,0)) order_coupon_last_1d_count,
+        sum(if(dt='$do_date',order_activity_reduce_amount,0)) order_activity_reduce_last_1d_amount,
+        sum(if(dt='$do_date',order_coupon_reduce_amount,0)) order_coupon_reduce_last_1d_amount,
+        sum(if(dt='$do_date',order_original_amount,0)) order_last_1d_original_amount,
+        sum(if(dt='$do_date',order_final_amount,0)) order_last_1d_final_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_count,0)) order_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),order_num,0)) order_last_7d_num,
+        sum(if(dt>=date_add('$do_date',-6),order_activity_count,0)) order_activity_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),order_coupon_count,0)) order_coupon_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),order_activity_reduce_amount,0)) order_activity_reduce_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_coupon_reduce_amount,0)) order_coupon_reduce_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_original_amount,0)) order_last_7d_original_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_final_amount,0)) order_last_7d_final_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_count,0)) order_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),order_num,0)) order_last_30d_num,
+        sum(if(dt>=date_add('$do_date',-29),order_activity_count,0)) order_activity_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),order_coupon_count,0)) order_coupon_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),order_activity_reduce_amount,0)) order_activity_reduce_last_30d_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_coupon_reduce_amount,0)) order_coupon_reduce_last_30d_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_original_amount,0)) order_last_30d_original_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_final_amount,0)) order_last_30d_final_amount,
+        sum(order_count) order_count,
+        sum(order_num) order_num,
+        sum(order_activity_count) order_activity_count,
+        sum(order_coupon_count) order_coupon_count,
+        sum(order_activity_reduce_amount) order_activity_reduce_amount,
+        sum(order_coupon_reduce_amount) order_coupon_reduce_amount,
+        sum(order_original_amount) order_original_amount,
+        sum(order_final_amount) order_final_amount,
+        sum(if(dt='$do_date',payment_count,0)) payment_last_1d_count,
+        sum(if(dt='$do_date',payment_num,0)) payment_last_1d_num,
+        sum(if(dt='$do_date',payment_amount,0)) payment_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),payment_count,0)) payment_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),payment_num,0)) payment_last_7d_num,
+        sum(if(dt>=date_add('$do_date',-6),payment_amount,0)) payment_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),payment_count,0)) payment_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),payment_num,0)) payment_last_30d_num,
+        sum(if(dt>=date_add('$do_date',-29),payment_amount,0)) payment_last_30d_amount,
+        sum(payment_count) payment_count,
+        sum(payment_num) payment_num,
+        sum(payment_amount) payment_amount,
+        sum(if(dt='$do_date',refund_order_count,0)) refund_order_last_1d_count,
+        sum(if(dt='$do_date',refund_order_num,0)) refund_order_last_1d_num,
+        sum(if(dt='$do_date',refund_order_amount,0)) refund_order_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),refund_order_count,0)) refund_order_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),refund_order_num,0)) refund_order_last_7d_num,
+        sum(if(dt>=date_add('$do_date',-6),refund_order_amount,0)) refund_order_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),refund_order_count,0)) refund_order_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),refund_order_num,0)) refund_order_last_30d_num,
+        sum(if(dt>=date_add('$do_date',-29),refund_order_amount,0)) refund_order_last_30d_amount,
+        sum(refund_order_count) refund_order_count,
+        sum(refund_order_num) refund_order_num,
+        sum(refund_order_amount) refund_order_amount,
+        sum(if(dt='$do_date',refund_payment_count,0)) refund_payment_last_1d_count,
+        sum(if(dt='$do_date',refund_payment_num,0)) refund_payment_last_1d_num,
+        sum(if(dt='$do_date',refund_payment_amount,0)) refund_payment_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),refund_payment_count,0)) refund_payment_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),refund_payment_num,0)) refund_payment_last_7d_num,
+        sum(if(dt>=date_add('$do_date',-6),refund_payment_amount,0)) refund_payment_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),refund_payment_count,0)) refund_payment_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),refund_payment_num,0)) refund_payment_last_30d_num,
+        sum(if(dt>=date_add('$do_date',-29),refund_payment_amount,0)) refund_payment_last_30d_amount,
+        sum(refund_payment_count) refund_payment_count,
+        sum(refund_payment_num) refund_payment_num,
+        sum(refund_payment_amount) refund_payment_amount,
+        sum(if(dt='$do_date',cart_count,0)) cart_last_1d_count,
+        sum(if(dt>=date_add('$do_date',-6),cart_count,0)) cart_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-29),cart_count,0)) cart_last_30d_count,
+        sum(cart_count) cart_count,
+        sum(if(dt='$do_date',favor_count,0)) favor_last_1d_count,
+        sum(if(dt>=date_add('$do_date',-6),favor_count,0)) favor_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-29),favor_count,0)) favor_last_30d_count,
+        sum(favor_count) favor_count,
+        sum(if(dt='$do_date',appraise_good_count,0)) appraise_last_1d_good_count,
+        sum(if(dt='$do_date',appraise_mid_count,0)) appraise_last_1d_mid_count,
+        sum(if(dt='$do_date',appraise_bad_count,0)) appraise_last_1d_bad_count,
+        sum(if(dt='$do_date',appraise_default_count,0)) appraise_last_1d_default_count,
+        sum(if(dt>=date_add('$do_date',-6),appraise_good_count,0)) appraise_last_7d_good_count,
+        sum(if(dt>=date_add('$do_date',-6),appraise_mid_count,0)) appraise_last_7d_mid_count,
+        sum(if(dt>=date_add('$do_date',-6),appraise_bad_count,0)) appraise_last_7d_bad_count,
+        sum(if(dt>=date_add('$do_date',-6),appraise_default_count,0)) appraise_last_7d_default_count,
+        sum(if(dt>=date_add('$do_date',-29),appraise_good_count,0)) appraise_last_30d_good_count,
+        sum(if(dt>=date_add('$do_date',-29),appraise_mid_count,0)) appraise_last_30d_mid_count,
+        sum(if(dt>=date_add('$do_date',-29),appraise_bad_count,0)) appraise_last_30d_bad_count,
+        sum(if(dt>=date_add('$do_date',-29),appraise_default_count,0)) appraise_last_30d_default_count,
+        sum(appraise_good_count) appraise_good_count,
+        sum(appraise_mid_count) appraise_mid_count,
+        sum(appraise_bad_count) appraise_bad_count,
+        sum(appraise_default_count) appraise_default_count
+    from ${APP}.dws_sku_action_daycount
+    group by sku_id
+)t2
+on t1.id=t2.sku_id;
+"
+
+dwt_coupon_topic="
+insert overwrite table ${APP}.dwt_coupon_topic partition(dt='$do_date')
+select
+    id,
+    nvl(get_last_1d_count,0),
+    nvl(get_last_7d_count,0),
+    nvl(get_last_30d_count,0),
+    nvl(get_count,0),
+    nvl(order_last_1d_count,0),
+    nvl(order_last_1d_reduce_amount,0),
+    nvl(order_last_1d_original_amount,0),
+    nvl(order_last_1d_final_amount,0),
+    nvl(order_last_7d_count,0),
+    nvl(order_last_7d_reduce_amount,0),
+    nvl(order_last_7d_original_amount,0),
+    nvl(order_last_7d_final_amount,0),
+    nvl(order_last_30d_count,0),
+    nvl(order_last_30d_reduce_amount,0),
+    nvl(order_last_30d_original_amount,0),
+    nvl(order_last_30d_final_amount,0),
+    nvl(order_count,0),
+    nvl(order_reduce_amount,0),
+    nvl(order_original_amount,0),
+    nvl(order_final_amount,0),
+    nvl(payment_last_1d_count,0),
+    nvl(payment_last_1d_reduce_amount,0),
+    nvl(payment_last_1d_amount,0),
+    nvl(payment_last_7d_count,0),
+    nvl(payment_last_7d_reduce_amount,0),
+    nvl(payment_last_7d_amount,0),
+    nvl(payment_last_30d_count,0),
+    nvl(payment_last_30d_reduce_amount,0),
+    nvl(payment_last_30d_amount,0),
+    nvl(payment_count,0),
+    nvl(payment_reduce_amount,0),
+    nvl(payment_amount,0),
+    nvl(expire_last_1d_count,0),
+    nvl(expire_last_7d_count,0),
+    nvl(expire_last_30d_count,0),
+    nvl(expire_count,0)
+from
+(
+    select
+        id
+    from ${APP}.dim_coupon_info
+    where dt='$do_date'
+)t1
+left join
+(
+    select
+        coupon_id coupon_id,
+        sum(if(dt='$do_date',get_count,0)) get_last_1d_count,
+        sum(if(dt>=date_add('$do_date',-6),get_count,0)) get_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-29),get_count,0)) get_last_30d_count,
+        sum(get_count) get_count,
+        sum(if(dt='$do_date',order_count,0)) order_last_1d_count,
+        sum(if(dt='$do_date',order_reduce_amount,0)) order_last_1d_reduce_amount,
+        sum(if(dt='$do_date',order_original_amount,0)) order_last_1d_original_amount,
+        sum(if(dt='$do_date',order_final_amount,0)) order_last_1d_final_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_count,0)) order_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),order_reduce_amount,0)) order_last_7d_reduce_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_original_amount,0)) order_last_7d_original_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_final_amount,0)) order_last_7d_final_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_count,0)) order_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),order_reduce_amount,0)) order_last_30d_reduce_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_original_amount,0)) order_last_30d_original_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_final_amount,0)) order_last_30d_final_amount,
+        sum(order_count) order_count,
+        sum(order_reduce_amount) order_reduce_amount,
+        sum(order_original_amount) order_original_amount,
+        sum(order_final_amount) order_final_amount,
+        sum(if(dt='$do_date',payment_count,0)) payment_last_1d_count,
+        sum(if(dt='$do_date',payment_reduce_amount,0)) payment_last_1d_reduce_amount,
+        sum(if(dt='$do_date',payment_amount,0)) payment_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),payment_count,0)) payment_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),payment_reduce_amount,0)) payment_last_7d_reduce_amount,
+        sum(if(dt>=date_add('$do_date',-6),payment_amount,0)) payment_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),payment_count,0)) payment_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),payment_reduce_amount,0)) payment_last_30d_reduce_amount,
+        sum(if(dt>=date_add('$do_date',-29),payment_amount,0)) payment_last_30d_amount,
+        sum(payment_count) payment_count,
+        sum(payment_reduce_amount) payment_reduce_amount,
+        sum(payment_amount) payment_amount,
+        sum(if(dt='$do_date',expire_count,0)) expire_last_1d_count,
+        sum(if(dt>=date_add('$do_date',-6),expire_count,0)) expire_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-29),expire_count,0)) expire_last_30d_count,
+        sum(expire_count) expire_count
+    from ${APP}.dws_coupon_info_daycount
+    group by coupon_id
+)t2
+on t1.id=t2.coupon_id;
+"
+
+dwt_activity_topic="
+insert overwrite table ${APP}.dwt_activity_topic partition(dt='$do_date')
+select
+    t1.activity_rule_id,
+    t1.activity_id,
+    nvl(order_last_1d_count,0),
+    nvl(order_last_1d_reduce_amount,0),
+    nvl(order_last_1d_original_amount,0),
+    nvl(order_last_1d_final_amount,0),
+    nvl(order_count,0),
+    nvl(order_reduce_amount,0),
+    nvl(order_original_amount,0),
+    nvl(order_final_amount,0),
+    nvl(payment_last_1d_count,0),
+    nvl(payment_last_1d_reduce_amount,0),
+    nvl(payment_last_1d_amount,0),
+    nvl(payment_count,0),
+    nvl(payment_reduce_amount,0),
+    nvl(payment_amount,0)
+from
+(
+    select
+        activity_rule_id,
+        activity_id
+    from ${APP}.dim_activity_rule_info
+    where dt='$do_date'
+)t1
+left join
+(
+    select
+        activity_rule_id,
+        activity_id,
+        sum(if(dt='$do_date',order_count,0)) order_last_1d_count,
+        sum(if(dt='$do_date',order_reduce_amount,0)) order_last_1d_reduce_amount,
+        sum(if(dt='$do_date',order_original_amount,0)) order_last_1d_original_amount,
+        sum(if(dt='$do_date',order_final_amount,0)) order_last_1d_final_amount,
+        sum(order_count) order_count,
+        sum(order_reduce_amount) order_reduce_amount,
+        sum(order_original_amount) order_original_amount,
+        sum(order_final_amount) order_final_amount,
+        sum(if(dt='$do_date',payment_count,0)) payment_last_1d_count,
+        sum(if(dt='$do_date',payment_reduce_amount,0)) payment_last_1d_reduce_amount,
+        sum(if(dt='$do_date',payment_amount,0)) payment_last_1d_amount,
+        sum(payment_count) payment_count,
+        sum(payment_reduce_amount) payment_reduce_amount,
+        sum(payment_amount) payment_amount
+    from ${APP}.dws_activity_info_daycount
+    group by activity_rule_id,activity_id
+)t2
+on t1.activity_rule_id=t2.activity_rule_id
+and t1.activity_id=t2.activity_id;
+"
+
+dwt_area_topic="
+insert overwrite table ${APP}.dwt_area_topic partition(dt='$do_date')
+select
+    id,
+    nvl(visit_last_1d_count,0),
+    nvl(login_last_1d_count,0),
+    nvl(visit_last_7d_count,0),
+    nvl(login_last_7d_count,0),
+    nvl(visit_last_30d_count,0),
+    nvl(login_last_30d_count,0),
+    nvl(visit_count,0),
+    nvl(login_count,0),
+    nvl(order_last_1d_count,0),
+    nvl(order_last_1d_original_amount,0),
+    nvl(order_last_1d_final_amount,0),
+    nvl(order_last_7d_count,0),
+    nvl(order_last_7d_original_amount,0),
+    nvl(order_last_7d_final_amount,0),
+    nvl(order_last_30d_count,0),
+    nvl(order_last_30d_original_amount,0),
+    nvl(order_last_30d_final_amount,0),
+    nvl(order_count,0),
+    nvl(order_original_amount,0),
+    nvl(order_final_amount,0),
+    nvl(payment_last_1d_count,0),
+    nvl(payment_last_1d_amount,0),
+    nvl(payment_last_7d_count,0),
+    nvl(payment_last_7d_amount,0),
+    nvl(payment_last_30d_count,0),
+    nvl(payment_last_30d_amount,0),
+    nvl(payment_count,0),
+    nvl(payment_amount,0),
+    nvl(refund_order_last_1d_count,0),
+    nvl(refund_order_last_1d_amount,0),
+    nvl(refund_order_last_7d_count,0),
+    nvl(refund_order_last_7d_amount,0),
+    nvl(refund_order_last_30d_count,0),
+    nvl(refund_order_last_30d_amount,0),
+    nvl(refund_order_count,0),
+    nvl(refund_order_amount,0),
+    nvl(refund_payment_last_1d_count,0),
+    nvl(refund_payment_last_1d_amount,0),
+    nvl(refund_payment_last_7d_count,0),
+    nvl(refund_payment_last_7d_amount,0),
+    nvl(refund_payment_last_30d_count,0),
+    nvl(refund_payment_last_30d_amount,0),
+    nvl(refund_payment_count,0),
+    nvl(refund_payment_amount,0)
+from
+(
+    select
+        id
+    from ${APP}.dim_base_province
+)t1
+left join
+(
+    select
+        province_id province_id,
+        sum(if(dt='$do_date',visit_count,0)) visit_last_1d_count,
+        sum(if(dt='$do_date',login_count,0)) login_last_1d_count,
+        sum(if(dt>=date_add('$do_date',-6),visit_count,0)) visit_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),login_count,0)) login_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-29),visit_count,0)) visit_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),login_count,0)) login_last_30d_count,
+        sum(visit_count) visit_count,
+        sum(login_count) login_count,
+        sum(if(dt='$do_date',order_count,0)) order_last_1d_count,
+        sum(if(dt='$do_date',order_original_amount,0)) order_last_1d_original_amount,
+        sum(if(dt='$do_date',order_final_amount,0)) order_last_1d_final_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_count,0)) order_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),order_original_amount,0)) order_last_7d_original_amount,
+        sum(if(dt>=date_add('$do_date',-6),order_final_amount,0)) order_last_7d_final_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_count,0)) order_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),order_original_amount,0)) order_last_30d_original_amount,
+        sum(if(dt>=date_add('$do_date',-29),order_final_amount,0)) order_last_30d_final_amount,
+        sum(order_count) order_count,
+        sum(order_original_amount) order_original_amount,
+        sum(order_final_amount) order_final_amount,
+        sum(if(dt='$do_date',payment_count,0)) payment_last_1d_count,
+        sum(if(dt='$do_date',payment_amount,0)) payment_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),payment_count,0)) payment_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),payment_amount,0)) payment_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),payment_count,0)) payment_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),payment_amount,0)) payment_last_30d_amount,
+        sum(payment_count) payment_count,
+        sum(payment_amount) payment_amount,
+        sum(if(dt='$do_date',refund_order_count,0)) refund_order_last_1d_count,
+        sum(if(dt='$do_date',refund_order_amount,0)) refund_order_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),refund_order_count,0)) refund_order_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),refund_order_amount,0)) refund_order_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),refund_order_count,0)) refund_order_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),refund_order_amount,0)) refund_order_last_30d_amount,
+        sum(refund_order_count) refund_order_count,
+        sum(refund_order_amount) refund_order_amount,
+        sum(if(dt='$do_date',refund_payment_count,0)) refund_payment_last_1d_count,
+        sum(if(dt='$do_date',refund_payment_amount,0)) refund_payment_last_1d_amount,
+        sum(if(dt>=date_add('$do_date',-6),refund_payment_count,0)) refund_payment_last_7d_count,
+        sum(if(dt>=date_add('$do_date',-6),refund_payment_amount,0)) refund_payment_last_7d_amount,
+        sum(if(dt>=date_add('$do_date',-29),refund_payment_count,0)) refund_payment_last_30d_count,
+        sum(if(dt>=date_add('$do_date',-29),refund_payment_amount,0)) refund_payment_last_30d_amount,
+        sum(refund_payment_count) refund_payment_count,
+        sum(refund_payment_amount) refund_payment_amount
+    from ${APP}.dws_area_stats_daycount
+    group by province_id
+)t2
+on t1.id=t2.province_id;
+"
+
+
+case $1 in
+    "dwt_visitor_topic" )
+        hive -e "$dwt_visitor_topic"
+    ;;
+    "dwt_user_topic" )
+        hive -e "$dwt_user_topic"
+    ;;
+    "dwt_sku_topic" )
+        hive -e "$dwt_sku_topic"
+    ;;
+    "dwt_activity_topic" )
+        hive -e "$dwt_activity_topic"
+    ;;
+    "dwt_coupon_topic" )
+        hive -e "$dwt_coupon_topic"
+    ;;
+    "dwt_area_topic" )
+        hive -e "$dwt_area_topic"
+    ;;
+    "all" )
+        hive -e "$dwt_visitor_topic$dwt_user_topic$dwt_sku_topic$dwt_activity_topic$dwt_coupon_topic$dwt_area_topic"
+    ;;
+esac
+```
+
+修改权限
+
+chmod +x bin/dws_to_dwt_init.sh
+
+执行脚本
+
+dws_to_dwt_init.sh all 2020-06-14
+
+##### 每日
+
+编辑脚本
+
+vi bin/dws_to_dwt.sh
+
+```shell
+#!/bin/bash
+
+APP=gmall
+# 如果是输入的日期按照取输入日期；如果没输入日期取当前时间的前一天
+if [ -n "$2" ] ;then
+    do_date=$2
+else 
+    do_date=`date -d "-1 day" +%F`
+fi
+
+clear_date=`date -d "$do_date -2 day" +%F`
+
+dwt_visitor_topic="
+insert overwrite table ${APP}.dwt_visitor_topic partition(dt='$do_date')
+select
+    nvl(1d_ago.mid_id,old.mid_id),
+    nvl(1d_ago.brand,old.brand),
+    nvl(1d_ago.model,old.model),
+    nvl(1d_ago.channel,old.channel),
+    nvl(1d_ago.os,old.os),
+    nvl(1d_ago.area_code,old.area_code),
+    nvl(1d_ago.version_code,old.version_code),
+    case when old.mid_id is null and 1d_ago.is_new=1 then '$do_date'
+         when old.mid_id is null and 1d_ago.is_new=0 then '2020-06-13'--无法获取准确的首次登录日期，给定一个数仓搭建日之前的日期
+         else old.visit_date_first end,
+    if(1d_ago.mid_id is not null,'$do_date',old.visit_date_last),
+    nvl(1d_ago.visit_count,0),
+    if(1d_ago.mid_id is null,0,1),
+    nvl(old.visit_last_7d_count,0)+nvl(1d_ago.visit_count,0)- nvl(7d_ago.visit_count,0),
+    nvl(old.visit_last_7d_day_count,0)+if(1d_ago.mid_id is null,0,1)- if(7d_ago.mid_id is null,0,1),
+    nvl(old.visit_last_30d_count,0)+nvl(1d_ago.visit_count,0)- nvl(30d_ago.visit_count,0),
+    nvl(old.visit_last_30d_day_count,0)+if(1d_ago.mid_id is null,0,1)- if(30d_ago.mid_id is null,0,1),
+    nvl(old.visit_count,0)+nvl(1d_ago.visit_count,0),
+    nvl(old.visit_day_count,0)+if(1d_ago.mid_id is null,0,1)
+from
+(
+    select
+        mid_id,
+        brand,
+        model,
+        channel,
+        os,
+        area_code,
+        version_code,
+        visit_date_first,
+        visit_date_last,
+        visit_last_1d_count,
+        visit_last_1d_day_count,
+        visit_last_7d_count,
+        visit_last_7d_day_count,
+        visit_last_30d_count,
+        visit_last_30d_day_count,
+        visit_count,
+        visit_day_count
+    from ${APP}.dwt_visitor_topic
+    where dt=date_add('$do_date',-1)
+)old
+full outer join
+(
+    select
+        mid_id,
+        brand,
+        model,
+        is_new,
+        channel,
+        os,
+        area_code,
+        version_code,
+        visit_count
+    from ${APP}.dws_visitor_action_daycount
+    where dt='$do_date'
+)1d_ago
+on old.mid_id=1d_ago.mid_id
+left join
+(
+    select
+        mid_id,
+        brand,
+        model,
+        is_new,
+        channel,
+        os,
+        area_code,
+        version_code,
+        visit_count
+    from ${APP}.dws_visitor_action_daycount
+    where dt=date_add('$do_date',-7)
+)7d_ago
+on old.mid_id=7d_ago.mid_id
+left join
+(
+    select
+        mid_id,
+        brand,
+        model,
+        is_new,
+        channel,
+        os,
+        area_code,
+        version_code,
+        visit_count
+    from ${APP}.dws_visitor_action_daycount
+    where dt=date_add('$do_date',-30)
+)30d_ago
+on old.mid_id=30d_ago.mid_id;
+alter table ${APP}.dwt_visitor_topic drop partition(dt='$clear_date');
+"
+
+dwt_user_topic="
+insert overwrite table ${APP}.dwt_user_topic partition(dt='$do_date')
+select
+    nvl(1d_ago.user_id,old.user_id),
+    nvl(old.login_date_first,'$do_date'),
+    if(1d_ago.user_id is not null,'$do_date',old.login_date_last),
+    nvl(1d_ago.login_count,0),
+    if(1d_ago.user_id is not null,1,0),
+    nvl(old.login_last_7d_count,0)+nvl(1d_ago.login_count,0)- nvl(7d_ago.login_count,0),
+    nvl(old.login_last_7d_day_count,0)+if(1d_ago.user_id is null,0,1)- if(7d_ago.user_id is null,0,1),
+    nvl(old.login_last_30d_count,0)+nvl(1d_ago.login_count,0)- nvl(30d_ago.login_count,0),
+    nvl(old.login_last_30d_day_count,0)+if(1d_ago.user_id is null,0,1)- if(30d_ago.user_id is null,0,1),
+    nvl(old.login_count,0)+nvl(1d_ago.login_count,0),
+    nvl(old.login_day_count,0)+if(1d_ago.user_id is not null,1,0),
+    if(old.order_date_first is null and 1d_ago.order_count>0, '$do_date', old.order_date_first),
+    if(1d_ago.order_count>0,'$do_date',old.order_date_last),
+    nvl(1d_ago.order_count,0),
+    nvl(1d_ago.order_activity_count,0),
+    nvl(1d_ago.order_activity_reduce_amount,0.0),
+    nvl(1d_ago.order_coupon_count,0),
+    nvl(1d_ago.order_coupon_reduce_amount,0.0),
+    nvl(1d_ago.order_original_amount,0.0),
+    nvl(1d_ago.order_final_amount,0.0),
+    nvl(old.order_last_7d_count,0)+nvl(1d_ago.order_count,0)- nvl(7d_ago.order_count,0),
+    nvl(old.order_activity_last_7d_count,0)+nvl(1d_ago.order_activity_count,0)- nvl(7d_ago.order_activity_count,0),
+    nvl(old.order_activity_reduce_last_7d_amount,0.0)+nvl(1d_ago.order_activity_reduce_amount,0.0)- nvl(7d_ago.order_activity_reduce_amount,0.0),
+    nvl(old.order_coupon_last_7d_count,0)+nvl(1d_ago.order_coupon_count,0)- nvl(7d_ago.order_coupon_count,0),
+    nvl(old.order_coupon_reduce_last_7d_amount,0.0)+nvl(1d_ago.order_coupon_reduce_amount,0.0)- nvl(7d_ago.order_coupon_reduce_amount,0.0),
+    nvl(old.order_last_7d_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0)- nvl(7d_ago.order_original_amount,0.0),
+    nvl(old.order_last_7d_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0)- nvl(7d_ago.order_final_amount,0.0),
+    nvl(old.order_last_30d_count,0)+nvl(1d_ago.order_count,0)- nvl(30d_ago.order_count,0),
+    nvl(old.order_activity_last_30d_count,0)+nvl(1d_ago.order_activity_count,0)- nvl(30d_ago.order_activity_count,0),
+    nvl(old.order_activity_reduce_last_30d_amount,0.0)+nvl(1d_ago.order_activity_reduce_amount,0.0)- nvl(30d_ago.order_activity_reduce_amount,0.0),
+    nvl(old.order_coupon_last_30d_count,0)+nvl(1d_ago.order_coupon_count,0)- nvl(30d_ago.order_coupon_count,0),
+    nvl(old.order_coupon_reduce_last_30d_amount,0.0)+nvl(1d_ago.order_coupon_reduce_amount,0.0)- nvl(30d_ago.order_coupon_reduce_amount,0.0),
+    nvl(old.order_last_30d_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0)- nvl(30d_ago.order_original_amount,0.0),
+    nvl(old.order_last_30d_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0)- nvl(30d_ago.order_final_amount,0.0),
+    nvl(old.order_count,0)+nvl(1d_ago.order_count,0),
+    nvl(old.order_activity_count,0)+nvl(1d_ago.order_activity_count,0),
+    nvl(old.order_activity_reduce_amount,0.0)+nvl(1d_ago.order_activity_reduce_amount,0.0),
+    nvl(old.order_coupon_count,0)+nvl(1d_ago.order_coupon_count,0),
+    nvl(old.order_coupon_reduce_amount,0.0)+nvl(1d_ago.order_coupon_reduce_amount,0.0),
+    nvl(old.order_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0),
+    nvl(old.order_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0),
+    if(old.payment_date_first is null and 1d_ago.payment_count>0, '$do_date', old.payment_date_first),
+    if(1d_ago.payment_count>0,'$do_date',old.payment_date_last),
+    nvl(1d_ago.payment_count,0),
+    nvl(1d_ago.payment_amount,0.0),
+    nvl(old.payment_last_7d_count,0)+nvl(1d_ago.payment_count,0)-nvl(7d_ago.payment_count,0),
+    nvl(old.payment_last_7d_amount,0.0)+nvl(1d_ago.payment_amount,0.0)-nvl(7d_ago.payment_amount,0.0),
+    nvl(old.payment_last_30d_count,0)+nvl(1d_ago.payment_count,0)-nvl(30d_ago.payment_count,0),
+    nvl(old.payment_last_30d_amount,0.0)+nvl(1d_ago.payment_amount,0.0)- nvl(30d_ago.payment_amount,0.0),
+    nvl(old.payment_count,0)+nvl(1d_ago.payment_count,0),
+    nvl(old.payment_amount,0.0)+nvl(1d_ago.payment_amount,0.0),
+    nvl(1d_ago.refund_order_count,0),
+    nvl(1d_ago.refund_order_num,0),
+    nvl(1d_ago.refund_order_amount,0.0),
+    nvl(old.refund_order_last_7d_count,0)+nvl(1d_ago.refund_order_count,0)- nvl(7d_ago.refund_order_count,0),
+    nvl(old.refund_order_last_7d_num,0)+nvl(1d_ago.refund_order_num, 0)- nvl(7d_ago.refund_order_num,0),
+    nvl(old.refund_order_last_7d_amount,0.0)+ nvl(1d_ago.refund_order_amount,0.0)- nvl(7d_ago.refund_order_amount,0.0),
+    nvl(old.refund_order_last_30d_count,0)+nvl(1d_ago.refund_order_count,0)- nvl(30d_ago.refund_order_count,0),
+    nvl(old.refund_order_last_30d_num,0)+nvl(1d_ago.refund_order_num, 0)- nvl(30d_ago.refund_order_num,0),
+    nvl(old.refund_order_last_30d_amount,0.0)+ nvl(1d_ago.refund_order_amount,0.0)- nvl(30d_ago.refund_order_amount,0.0),
+    nvl(old.refund_order_count,0)+nvl(1d_ago.refund_order_count,0),
+    nvl(old.refund_order_num,0)+nvl(1d_ago.refund_order_num,0),
+    nvl(old.refund_order_amount,0.0)+ nvl(1d_ago.refund_order_amount,0.0),
+    nvl(1d_ago.refund_payment_count,0),
+    nvl(1d_ago.refund_payment_num,0),
+    nvl(1d_ago.refund_payment_amount,0.0),
+    nvl(old.refund_payment_last_7d_count,0)+nvl(1d_ago.refund_payment_count,0)-nvl(7d_ago.refund_payment_count,0),
+    nvl(old.refund_payment_last_7d_num,0)+nvl(1d_ago.refund_payment_num,0)- nvl(7d_ago.refund_payment_num,0),
+    nvl(old.refund_payment_last_7d_amount,0.0)+ nvl(1d_ago.refund_payment_amount,0.0)- nvl(7d_ago.refund_payment_amount,0.0),
+    nvl(old.refund_payment_last_30d_count,0)+nvl(1d_ago.refund_payment_count,0)-nvl(30d_ago.refund_payment_count,0),
+    nvl(old.refund_payment_last_30d_num,0)+nvl(1d_ago.refund_payment_num,0)- nvl(30d_ago.refund_payment_num,0),
+    nvl(old.refund_payment_last_30d_amount,0.0)+ nvl(1d_ago.refund_payment_amount,0.0)- nvl(30d_ago.refund_payment_amount,0.0),
+    nvl(old.refund_payment_count,0)+nvl(1d_ago.refund_payment_count,0),
+    nvl(old.refund_payment_num,0)+nvl(1d_ago.refund_payment_num,0),
+    nvl(old.refund_payment_amount,0.0)+nvl(1d_ago.refund_payment_amount,0.0),
+    nvl(1d_ago.cart_count,0),
+    nvl(old.cart_last_7d_count,0)+nvl(1d_ago.cart_count,0)-nvl(7d_ago.cart_count,0),
+    nvl(old.cart_last_30d_count,0)+nvl(1d_ago.cart_count,0)-nvl(30d_ago.cart_count,0),
+    nvl(old.cart_count,0)+nvl(1d_ago.cart_count,0),
+    nvl(1d_ago.favor_count,0),
+    nvl(old.favor_last_7d_count,0)+nvl(1d_ago.favor_count,0)- nvl(7d_ago.favor_count,0),
+    nvl(old.favor_last_30d_count,0)+nvl(1d_ago.favor_count,0)- nvl(30d_ago.favor_count,0),
+    nvl(old.favor_count,0)+nvl(1d_ago.favor_count,0),
+    nvl(1d_ago.coupon_get_count,0),
+    nvl(1d_ago.coupon_using_count,0),
+    nvl(1d_ago.coupon_used_count,0),
+    nvl(old.coupon_last_7d_get_count,0)+nvl(1d_ago.coupon_get_count,0)- nvl(7d_ago.coupon_get_count,0),
+    nvl(old.coupon_last_7d_using_count,0)+nvl(1d_ago.coupon_using_count,0)- nvl(7d_ago.coupon_using_count,0),
+    nvl(old.coupon_last_7d_used_count,0)+ nvl(1d_ago.coupon_used_count,0)- nvl(7d_ago.coupon_used_count,0),
+    nvl(old.coupon_last_30d_get_count,0)+nvl(1d_ago.coupon_get_count,0)- nvl(30d_ago.coupon_get_count,0),
+    nvl(old.coupon_last_30d_using_count,0)+nvl(1d_ago.coupon_using_count,0)- nvl(30d_ago.coupon_using_count,0),
+    nvl(old.coupon_last_30d_used_count,0)+ nvl(1d_ago.coupon_used_count,0)- nvl(30d_ago.coupon_used_count,0),
+    nvl(old.coupon_get_count,0)+nvl(1d_ago.coupon_get_count,0),
+    nvl(old.coupon_using_count,0)+nvl(1d_ago.coupon_using_count,0),
+    nvl(old.coupon_used_count,0)+nvl(1d_ago.coupon_used_count,0),
+    nvl(1d_ago.appraise_good_count,0),
+    nvl(1d_ago.appraise_mid_count,0),
+    nvl(1d_ago.appraise_bad_count,0),
+    nvl(old.appraise_last_7d_default_count,0)+nvl(1d_ago.appraise_default_count,0)-nvl(7d_ago.appraise_default_count,0),
+    nvl(old.appraise_last_7d_good_count,0)+nvl(1d_ago.appraise_good_count,0)- nvl(7d_ago.appraise_good_count,0),
+    nvl(old.appraise_last_7d_mid_count,0)+nvl(1d_ago.appraise_mid_count,0)-nvl(7d_ago.appraise_mid_count,0),
+    nvl(old.appraise_last_7d_bad_count,0)+nvl(1d_ago.appraise_bad_count,0)-nvl(7d_ago.appraise_bad_count,0),
+    nvl(old.appraise_last_7d_default_count,0)+nvl(1d_ago.appraise_default_count,0)-nvl(7d_ago.appraise_default_count,0),
+    nvl(old.appraise_last_30d_good_count,0)+nvl(1d_ago.appraise_good_count,0)- nvl(30d_ago.appraise_good_count,0),
+    nvl(old.appraise_last_30d_mid_count,0)+nvl(1d_ago.appraise_mid_count,0)-nvl(30d_ago.appraise_mid_count,0),
+    nvl(old.appraise_last_30d_bad_count,0)+nvl(1d_ago.appraise_bad_count,0)-nvl(30d_ago.appraise_bad_count,0),
+    nvl(old.appraise_last_30d_default_count,0)+nvl(1d_ago.appraise_default_count,0)-nvl(30d_ago.appraise_default_count,0),
+    nvl(old.appraise_good_count,0)+nvl(1d_ago.appraise_good_count,0),
+    nvl(old.appraise_mid_count,0)+nvl(1d_ago.appraise_mid_count, 0),
+    nvl(old.appraise_bad_count,0)+nvl(1d_ago.appraise_bad_count,0),
+    nvl(old.appraise_default_count,0)+nvl(1d_ago.appraise_default_count,0)
+from
+(
+    select
+        user_id,
+        login_date_first,
+        login_date_last,
+        login_date_1d_count,
+        login_last_1d_day_count,
+        login_last_7d_count,
+        login_last_7d_day_count,
+        login_last_30d_count,
+        login_last_30d_day_count,
+        login_count,
+        login_day_count,
+        order_date_first,
+        order_date_last,
+        order_last_1d_count,
+        order_activity_last_1d_count,
+        order_activity_reduce_last_1d_amount,
+        order_coupon_last_1d_count,
+        order_coupon_reduce_last_1d_amount,
+        order_last_1d_original_amount,
+        order_last_1d_final_amount,
+        order_last_7d_count,
+        order_activity_last_7d_count,
+        order_activity_reduce_last_7d_amount,
+        order_coupon_last_7d_count,
+        order_coupon_reduce_last_7d_amount,
+        order_last_7d_original_amount,
+        order_last_7d_final_amount,
+        order_last_30d_count,
+        order_activity_last_30d_count,
+        order_activity_reduce_last_30d_amount,
+        order_coupon_last_30d_count,
+        order_coupon_reduce_last_30d_amount,
+        order_last_30d_original_amount,
+        order_last_30d_final_amount,
+        order_count,
+        order_activity_count,
+        order_activity_reduce_amount,
+        order_coupon_count,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_date_first,
+        payment_date_last,
+        payment_last_1d_count,
+        payment_last_1d_amount,
+        payment_last_7d_count,
+        payment_last_7d_amount,
+        payment_last_30d_count,
+        payment_last_30d_amount,
+        payment_count,
+        payment_amount,
+        refund_order_last_1d_count,
+        refund_order_last_1d_num,
+        refund_order_last_1d_amount,
+        refund_order_last_7d_count,
+        refund_order_last_7d_num,
+        refund_order_last_7d_amount,
+        refund_order_last_30d_count,
+        refund_order_last_30d_num,
+        refund_order_last_30d_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        refund_payment_last_1d_count,
+        refund_payment_last_1d_num,
+        refund_payment_last_1d_amount,
+        refund_payment_last_7d_count,
+        refund_payment_last_7d_num,
+        refund_payment_last_7d_amount,
+        refund_payment_last_30d_count,
+        refund_payment_last_30d_num,
+        refund_payment_last_30d_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        cart_last_1d_count,
+        cart_last_7d_count,
+        cart_last_30d_count,
+        cart_count,
+        favor_last_1d_count,
+        favor_last_7d_count,
+        favor_last_30d_count,
+        favor_count,
+        coupon_last_1d_get_count,
+        coupon_last_1d_using_count,
+        coupon_last_1d_used_count,
+        coupon_last_7d_get_count,
+        coupon_last_7d_using_count,
+        coupon_last_7d_used_count,
+        coupon_last_30d_get_count,
+        coupon_last_30d_using_count,
+        coupon_last_30d_used_count,
+        coupon_get_count,
+        coupon_using_count,
+        coupon_used_count,
+        appraise_last_1d_good_count,
+        appraise_last_1d_mid_count,
+        appraise_last_1d_bad_count,
+        appraise_last_1d_default_count,
+        appraise_last_7d_good_count,
+        appraise_last_7d_mid_count,
+        appraise_last_7d_bad_count,
+        appraise_last_7d_default_count,
+        appraise_last_30d_good_count,
+        appraise_last_30d_mid_count,
+        appraise_last_30d_bad_count,
+        appraise_last_30d_default_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from ${APP}.dwt_user_topic
+    where dt=date_add('$do_date',-1)
+)old
+full outer join
+(
+    select
+        user_id,
+        login_count,
+        cart_count,
+        favor_count,
+        order_count,
+        order_activity_count,
+        order_activity_reduce_amount,
+        order_coupon_count,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        coupon_get_count,
+        coupon_using_count,
+        coupon_used_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from ${APP}.dws_user_action_daycount
+    where dt='$do_date'
+)1d_ago
+on old.user_id=1d_ago.user_id
+left join
+(
+    select
+        user_id,
+        login_count,
+        cart_count,
+        favor_count,
+        order_count,
+        order_activity_count,
+        order_activity_reduce_amount,
+        order_coupon_count,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        coupon_get_count,
+        coupon_using_count,
+        coupon_used_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from ${APP}.dws_user_action_daycount
+    where dt=date_add('$do_date',-7)
+)7d_ago
+on old.user_id=7d_ago.user_id
+left join
+(
+    select
+        user_id,
+        login_count,
+        cart_count,
+        favor_count,
+        order_count,
+        order_activity_count,
+        order_activity_reduce_amount,
+        order_coupon_count,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        coupon_get_count,
+        coupon_using_count,
+        coupon_used_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from ${APP}.dws_user_action_daycount
+    where dt=date_add('$do_date',-30)
+)30d_ago
+on old.user_id=30d_ago.user_id;
+alter table ${APP}.dwt_user_topic drop partition(dt='$clear_date');
+"
+
+dwt_sku_topic="
+insert overwrite table ${APP}.dwt_sku_topic partition(dt='$do_date')
+select
+    nvl(1d_ago.sku_id,old.sku_id),
+    nvl(1d_ago.order_count,0),
+    nvl(1d_ago.order_num,0),
+    nvl(1d_ago.order_activity_count,0),
+    nvl(1d_ago.order_coupon_count,0),
+    nvl(1d_ago.order_activity_reduce_amount,0.0),
+    nvl(1d_ago.order_coupon_reduce_amount,0.0),
+    nvl(1d_ago.order_original_amount,0.0),
+    nvl(1d_ago.order_final_amount,0.0),
+    nvl(old.order_last_7d_count,0)+nvl(1d_ago.order_count,0)- nvl(7d_ago.order_count,0),
+    nvl(old.order_last_7d_num,0)+nvl(1d_ago.order_num,0)- nvl(7d_ago.order_num,0),
+    nvl(old.order_activity_last_7d_count,0)+nvl(1d_ago.order_activity_count,0)- nvl(7d_ago.order_activity_count,0),
+    nvl(old.order_coupon_last_7d_count,0)+nvl(1d_ago.order_coupon_count,0)- nvl(7d_ago.order_coupon_count,0),
+    nvl(old.order_activity_reduce_last_7d_amount,0.0)+nvl(1d_ago.order_activity_reduce_amount,0.0)- nvl(7d_ago.order_activity_reduce_amount,0.0),
+    nvl(old.order_coupon_reduce_last_7d_amount,0.0)+nvl(1d_ago.order_coupon_reduce_amount,0.0)- nvl(7d_ago.order_coupon_reduce_amount,0.0),
+    nvl(old.order_last_7d_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0)- nvl(7d_ago.order_original_amount,0.0),
+    nvl(old.order_last_7d_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0)- nvl(7d_ago.order_final_amount,0.0),
+    nvl(old.order_last_30d_count,0)+nvl(1d_ago.order_count,0)- nvl(30d_ago.order_count,0),
+    nvl(old.order_last_30d_num,0)+nvl(1d_ago.order_num,0)- nvl(30d_ago.order_num,0),
+    nvl(old.order_activity_last_30d_count,0)+nvl(1d_ago.order_activity_count,0)- nvl(30d_ago.order_activity_count,0),
+    nvl(old.order_coupon_last_30d_count,0)+nvl(1d_ago.order_coupon_count,0)- nvl(30d_ago.order_coupon_count,0),
+    nvl(old.order_activity_reduce_last_30d_amount,0.0)+nvl(1d_ago.order_activity_reduce_amount,0.0)- nvl(30d_ago.order_activity_reduce_amount,0.0),
+    nvl(old.order_coupon_reduce_last_30d_amount,0.0)+nvl(1d_ago.order_coupon_reduce_amount,0.0)- nvl(30d_ago.order_coupon_reduce_amount,0.0),
+    nvl(old.order_last_30d_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0)- nvl(30d_ago.order_original_amount,0.0),
+    nvl(old.order_last_30d_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0)- nvl(30d_ago.order_final_amount,0.0),
+    nvl(old.order_count,0)+nvl(1d_ago.order_count,0),
+    nvl(old.order_num,0)+nvl(1d_ago.order_num,0),
+    nvl(old.order_activity_count,0)+nvl(1d_ago.order_activity_count,0),
+    nvl(old.order_coupon_count,0)+nvl(1d_ago.order_coupon_count,0),
+    nvl(old.order_activity_reduce_amount,0.0)+nvl(1d_ago.order_activity_reduce_amount,0.0),
+    nvl(old.order_coupon_reduce_amount,0.0)+nvl(1d_ago.order_coupon_reduce_amount,0.0),
+    nvl(old.order_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0),
+    nvl(old.order_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0),
+    nvl(1d_ago.payment_count,0),
+    nvl(1d_ago.payment_num,0),
+    nvl(1d_ago.payment_amount,0.0),
+    nvl(old.payment_last_7d_count,0)+nvl(1d_ago.payment_count,0)- nvl(7d_ago.payment_count,0),
+    nvl(old.payment_last_7d_num,0)+nvl(1d_ago.payment_num,0)- nvl(7d_ago.payment_num,0),
+    nvl(old.payment_last_7d_amount,0.0)+nvl(1d_ago.payment_amount,0.0)- nvl(7d_ago.payment_amount,0.0),
+    nvl(old.payment_last_30d_count,0)+nvl(1d_ago.payment_count,0)- nvl(30d_ago.payment_count,0),
+    nvl(old.payment_last_30d_num,0)+nvl(1d_ago.payment_num,0)- nvl(30d_ago.payment_num,0),
+    nvl(old.payment_last_30d_amount,0.0)+nvl(1d_ago.payment_amount,0.0)- nvl(30d_ago.payment_amount,0.0),
+    nvl(old.payment_count,0)+nvl(1d_ago.payment_count,0),
+    nvl(old.payment_num,0)+nvl(1d_ago.payment_num,0),
+    nvl(old.payment_amount,0.0)+nvl(1d_ago.payment_amount,0.0),
+    nvl(old.refund_order_last_1d_count,0)+nvl(1d_ago.refund_order_count,0)- nvl(1d_ago.refund_order_count,0),
+    nvl(old.refund_order_last_1d_num,0)+nvl(1d_ago.refund_order_num,0)- nvl(1d_ago.refund_order_num,0),
+    nvl(old.refund_order_last_1d_amount,0.0)+nvl(1d_ago.refund_order_amount,0.0)- nvl(1d_ago.refund_order_amount,0.0),
+    nvl(old.refund_order_last_7d_count,0)+nvl(1d_ago.refund_order_count,0)- nvl(7d_ago.refund_order_count,0),
+    nvl(old.refund_order_last_7d_num,0)+nvl(1d_ago.refund_order_num,0)- nvl(7d_ago.refund_order_num,0),
+    nvl(old.refund_order_last_7d_amount,0.0)+nvl(1d_ago.refund_order_amount,0.0)- nvl(7d_ago.refund_order_amount,0.0),
+    nvl(old.refund_order_last_30d_count,0)+nvl(1d_ago.refund_order_count,0)- nvl(30d_ago.refund_order_count,0),
+    nvl(old.refund_order_last_30d_num,0)+nvl(1d_ago.refund_order_num,0)- nvl(30d_ago.refund_order_num,0),
+    nvl(old.refund_order_last_30d_amount,0.0)+nvl(1d_ago.refund_order_amount,0.0)- nvl(30d_ago.refund_order_amount,0.0),
+    nvl(old.refund_order_count,0)+nvl(1d_ago.refund_order_count,0),
+    nvl(old.refund_order_num,0)+nvl(1d_ago.refund_order_num,0),
+    nvl(old.refund_order_amount,0.0)+nvl(1d_ago.refund_order_amount,0.0),
+    nvl(1d_ago.refund_payment_count,0),
+    nvl(1d_ago.refund_payment_num,0),
+    nvl(1d_ago.refund_payment_amount,0.0),
+    nvl(old.refund_payment_last_7d_count,0)+nvl(1d_ago.refund_payment_count,0)- nvl(7d_ago.refund_payment_count,0),
+    nvl(old.refund_payment_last_7d_num,0)+nvl(1d_ago.refund_payment_num,0)- nvl(7d_ago.refund_payment_num,0),
+    nvl(old.refund_payment_last_7d_amount,0.0)+nvl(1d_ago.refund_payment_amount,0.0)- nvl(7d_ago.refund_payment_amount,0.0),
+    nvl(old.refund_payment_last_30d_count,0)+nvl(1d_ago.refund_payment_count,0)- nvl(30d_ago.refund_payment_count,0),
+    nvl(old.refund_payment_last_30d_num,0)+nvl(1d_ago.refund_payment_num,0)- nvl(30d_ago.refund_payment_num,0),
+    nvl(old.refund_payment_last_30d_amount,0.0)+nvl(1d_ago.refund_payment_amount,0.0)- nvl(30d_ago.refund_payment_amount,0.0),
+    nvl(old.refund_payment_count,0)+nvl(1d_ago.refund_payment_count,0),
+    nvl(old.refund_payment_num,0)+nvl(1d_ago.refund_payment_num,0),
+    nvl(old.refund_payment_amount,0.0)+nvl(1d_ago.refund_payment_amount,0.0),
+    nvl(1d_ago.cart_count,0),
+    nvl(old.cart_last_7d_count,0)+nvl(1d_ago.cart_count,0)- nvl(7d_ago.cart_count,0),
+    nvl(old.cart_last_30d_count,0)+nvl(1d_ago.cart_count,0)- nvl(30d_ago.cart_count,0),
+    nvl(old.cart_count,0)+nvl(1d_ago.cart_count,0),
+    nvl(1d_ago.favor_count,0),
+    nvl(old.favor_last_7d_count,0)+nvl(1d_ago.favor_count,0)- nvl(7d_ago.favor_count,0),
+    nvl(old.favor_last_30d_count,0)+nvl(1d_ago.favor_count,0)- nvl(30d_ago.favor_count,0),
+    nvl(old.favor_count,0)+nvl(1d_ago.favor_count,0),
+    nvl(1d_ago.appraise_good_count,0),
+    nvl(1d_ago.appraise_mid_count,0),
+    nvl(1d_ago.appraise_bad_count,0),
+    nvl(1d_ago.appraise_default_count,0),
+    nvl(old.appraise_last_7d_good_count,0)+nvl(1d_ago.appraise_good_count,0)- nvl(7d_ago.appraise_good_count,0),
+    nvl(old.appraise_last_7d_mid_count,0)+nvl(1d_ago.appraise_mid_count,0)- nvl(7d_ago.appraise_mid_count,0),
+    nvl(old.appraise_last_7d_bad_count,0)+nvl(1d_ago.appraise_bad_count,0)- nvl(7d_ago.appraise_bad_count,0),
+    nvl(old.appraise_last_7d_default_count,0)+nvl(1d_ago.appraise_default_count,0)- nvl(7d_ago.appraise_default_count,0),
+    nvl(old.appraise_last_30d_good_count,0)+nvl(1d_ago.appraise_good_count,0)- nvl(30d_ago.appraise_good_count,0),
+    nvl(old.appraise_last_30d_mid_count,0)+nvl(1d_ago.appraise_mid_count,0)- nvl(30d_ago.appraise_mid_count,0),
+    nvl(old.appraise_last_30d_bad_count,0)+nvl(1d_ago.appraise_bad_count,0)- nvl(30d_ago.appraise_bad_count,0),
+    nvl(old.appraise_last_30d_default_count,0)+nvl(1d_ago.appraise_default_count,0)- nvl(30d_ago.appraise_default_count,0),
+    nvl(old.appraise_good_count,0)+nvl(1d_ago.appraise_good_count,0),
+    nvl(old.appraise_mid_count,0)+nvl(1d_ago.appraise_mid_count,0),
+    nvl(old.appraise_bad_count,0)+nvl(1d_ago.appraise_bad_count,0),
+    nvl(old.appraise_default_count,0)+nvl(1d_ago.appraise_default_count,0)
+from
+(
+    select
+        sku_id,
+        order_last_1d_count,
+        order_last_1d_num,
+        order_activity_last_1d_count,
+        order_coupon_last_1d_count,
+        order_activity_reduce_last_1d_amount,
+        order_coupon_reduce_last_1d_amount,
+        order_last_1d_original_amount,
+        order_last_1d_final_amount,
+        order_last_7d_count,
+        order_last_7d_num,
+        order_activity_last_7d_count,
+        order_coupon_last_7d_count,
+        order_activity_reduce_last_7d_amount,
+        order_coupon_reduce_last_7d_amount,
+        order_last_7d_original_amount,
+        order_last_7d_final_amount,
+        order_last_30d_count,
+        order_last_30d_num,
+        order_activity_last_30d_count,
+        order_coupon_last_30d_count,
+        order_activity_reduce_last_30d_amount,
+        order_coupon_reduce_last_30d_amount,
+        order_last_30d_original_amount,
+        order_last_30d_final_amount,
+        order_count,
+        order_num,
+        order_activity_count,
+        order_coupon_count,
+        order_activity_reduce_amount,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_last_1d_count,
+        payment_last_1d_num,
+        payment_last_1d_amount,
+        payment_last_7d_count,
+        payment_last_7d_num,
+        payment_last_7d_amount,
+        payment_last_30d_count,
+        payment_last_30d_num,
+        payment_last_30d_amount,
+        payment_count,
+        payment_num,
+        payment_amount,
+        refund_order_last_1d_count,
+        refund_order_last_1d_num,
+        refund_order_last_1d_amount,
+        refund_order_last_7d_count,
+        refund_order_last_7d_num,
+        refund_order_last_7d_amount,
+        refund_order_last_30d_count,
+        refund_order_last_30d_num,
+        refund_order_last_30d_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        refund_payment_last_1d_count,
+        refund_payment_last_1d_num,
+        refund_payment_last_1d_amount,
+        refund_payment_last_7d_count,
+        refund_payment_last_7d_num,
+        refund_payment_last_7d_amount,
+        refund_payment_last_30d_count,
+        refund_payment_last_30d_num,
+        refund_payment_last_30d_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        cart_last_1d_count,
+        cart_last_7d_count,
+        cart_last_30d_count,
+        cart_count,
+        favor_last_1d_count,
+        favor_last_7d_count,
+        favor_last_30d_count,
+        favor_count,
+        appraise_last_1d_good_count,
+        appraise_last_1d_mid_count,
+        appraise_last_1d_bad_count,
+        appraise_last_1d_default_count,
+        appraise_last_7d_good_count,
+        appraise_last_7d_mid_count,
+        appraise_last_7d_bad_count,
+        appraise_last_7d_default_count,
+        appraise_last_30d_good_count,
+        appraise_last_30d_mid_count,
+        appraise_last_30d_bad_count,
+        appraise_last_30d_default_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from ${APP}.dwt_sku_topic
+    where dt=date_add('$do_date',-1)
+)old
+full outer join
+(
+    select
+        sku_id,
+        order_count,
+        order_num,
+        order_activity_count,
+        order_coupon_count,
+        order_activity_reduce_amount,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_num,
+        payment_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        cart_count,
+        favor_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from ${APP}.dws_sku_action_daycount
+    where dt='$do_date'
+)1d_ago
+on old.sku_id=1d_ago.sku_id
+left join
+(
+    select
+        sku_id,
+        order_count,
+        order_num,
+        order_activity_count,
+        order_coupon_count,
+        order_activity_reduce_amount,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_num,
+        payment_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        cart_count,
+        favor_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from ${APP}.dws_sku_action_daycount
+    where dt=date_add('$do_date',-7)
+)7d_ago
+on old.sku_id=7d_ago.sku_id
+left join
+(
+    select
+        sku_id,
+        order_count,
+        order_num,
+        order_activity_count,
+        order_coupon_count,
+        order_activity_reduce_amount,
+        order_coupon_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_num,
+        payment_amount,
+        refund_order_count,
+        refund_order_num,
+        refund_order_amount,
+        refund_payment_count,
+        refund_payment_num,
+        refund_payment_amount,
+        cart_count,
+        favor_count,
+        appraise_good_count,
+        appraise_mid_count,
+        appraise_bad_count,
+        appraise_default_count
+    from ${APP}.dws_sku_action_daycount
+    where dt=date_add('$do_date',-30)
+)30d_ago
+on old.sku_id=30d_ago.sku_id;
+alter table ${APP}.dwt_sku_topic drop partition(dt='$clear_date');
+"
+
+dwt_activity_topic="
+insert overwrite table ${APP}.dwt_activity_topic partition(dt='$do_date')
+select
+    nvl(1d_ago.activity_rule_id,old.activity_rule_id),
+    nvl(1d_ago.activity_id,old.activity_id),
+    nvl(1d_ago.order_count,0),
+    nvl(1d_ago.order_reduce_amount,0.0),
+    nvl(1d_ago.order_original_amount,0.0),
+    nvl(1d_ago.order_final_amount,0.0),
+    nvl(old.order_count,0)+nvl(1d_ago.order_count,0),
+    nvl(old.order_reduce_amount,0.0)+nvl(1d_ago.order_reduce_amount,0.0),
+    nvl(old.order_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0),
+    nvl(old.order_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0),
+    nvl(1d_ago.payment_count,0),
+    nvl(1d_ago.payment_reduce_amount,0.0),
+    nvl(1d_ago.payment_amount,0.0),
+    nvl(old.payment_count,0)+nvl(1d_ago.payment_count,0),
+    nvl(old.payment_reduce_amount,0.0)+nvl(1d_ago.payment_reduce_amount,0.0),
+    nvl(old.payment_amount,0.0)+nvl(1d_ago.payment_amount,0.0)
+from
+(
+    select
+        activity_rule_id,
+        activity_id,
+        order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_reduce_amount,
+        payment_amount
+    from ${APP}.dwt_activity_topic
+    where dt=date_add('$do_date',-1)
+)old
+full outer join
+(
+    select
+        activity_rule_id,
+        activity_id,
+        order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_reduce_amount,
+        payment_amount
+    from ${APP}.dws_activity_info_daycount
+    where dt='$do_date'
+)1d_ago
+on old.activity_rule_id=1d_ago.activity_rule_id;
+alter table ${APP}.dwt_activity_topic drop partition(dt='$clear_date');
+"
+
+dwt_coupon_topic="
+insert overwrite table ${APP}.dwt_coupon_topic partition(dt='$do_date')
+select
+    nvl(1d_ago.coupon_id,old.coupon_id),
+    nvl(1d_ago.get_count,0),
+    nvl(old.get_last_7d_count,0)+nvl(1d_ago.get_count,0)- nvl(7d_ago.get_count,0),
+    nvl(old.get_last_30d_count,0)+nvl(1d_ago.get_count,0)- nvl(30d_ago.get_count,0),
+    nvl(old.get_count,0)+nvl(1d_ago.get_count,0),
+    nvl(1d_ago.order_count,0),
+    nvl(1d_ago.order_reduce_amount,0.0),
+    nvl(1d_ago.order_original_amount,0.0),
+    nvl(1d_ago.order_final_amount,0.0),
+    nvl(old.order_last_7d_count,0)+nvl(1d_ago.order_count,0)- nvl(7d_ago.order_count,0),
+    nvl(old.order_last_7d_reduce_amount,0.0)+nvl(1d_ago.order_reduce_amount,0.0)- nvl(7d_ago.order_reduce_amount,0.0),
+    nvl(old.order_last_7d_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0)- nvl(7d_ago.order_original_amount,0.0),
+    nvl(old.order_last_7d_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0)- nvl(7d_ago.order_final_amount,0.0),
+    nvl(old.order_last_30d_count,0)+nvl(1d_ago.order_count,0)- nvl(30d_ago.order_count,0),
+    nvl(old.order_last_30d_reduce_amount,0.0)+nvl(1d_ago.order_reduce_amount,0.0)- nvl(30d_ago.order_reduce_amount,0.0),
+    nvl(old.order_last_30d_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0)- nvl(30d_ago.order_original_amount,0.0),
+    nvl(old.order_last_30d_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0)- nvl(30d_ago.order_final_amount,0.0),
+    nvl(old.order_count,0)+nvl(1d_ago.order_count,0),
+    nvl(old.order_reduce_amount,0.0)+nvl(1d_ago.order_reduce_amount,0.0),
+    nvl(old.order_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0),
+    nvl(old.order_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0),
+    nvl(old.payment_last_1d_count,0)+nvl(1d_ago.payment_count,0)- nvl(1d_ago.payment_count,0),
+    nvl(old.payment_last_1d_reduce_amount,0.0)+nvl(1d_ago.payment_reduce_amount,0.0)- nvl(1d_ago.payment_reduce_amount,0.0),
+    nvl(old.payment_last_1d_amount,0.0)+nvl(1d_ago.payment_amount,0.0)- nvl(1d_ago.payment_amount,0.0),
+    nvl(old.payment_last_7d_count,0)+nvl(1d_ago.payment_count,0)- nvl(7d_ago.payment_count,0),
+    nvl(old.payment_last_7d_reduce_amount,0.0)+nvl(1d_ago.payment_reduce_amount,0.0)- nvl(7d_ago.payment_reduce_amount,0.0),
+    nvl(old.payment_last_7d_amount,0.0)+nvl(1d_ago.payment_amount,0.0)- nvl(7d_ago.payment_amount,0.0),
+    nvl(old.payment_last_30d_count,0)+nvl(1d_ago.payment_count,0)- nvl(30d_ago.payment_count,0),
+    nvl(old.payment_last_30d_reduce_amount,0.0)+nvl(1d_ago.payment_reduce_amount,0.0)- nvl(30d_ago.payment_reduce_amount,0.0),
+    nvl(old.payment_last_30d_amount,0.0)+nvl(1d_ago.payment_amount,0.0)- nvl(30d_ago.payment_amount,0.0),
+    nvl(old.payment_count,0)+nvl(1d_ago.payment_count,0),
+    nvl(old.payment_reduce_amount,0.0)+nvl(1d_ago.payment_reduce_amount,0.0),
+    nvl(old.payment_amount,0.0)+nvl(1d_ago.payment_amount,0.0),
+    nvl(1d_ago.expire_count,0),
+    nvl(old.expire_last_7d_count,0)+nvl(1d_ago.expire_count,0)- nvl(7d_ago.expire_count,0),
+    nvl(old.expire_last_30d_count,0)+nvl(1d_ago.expire_count,0)- nvl(30d_ago.expire_count,0),
+    nvl(old.expire_count,0)+nvl(1d_ago.expire_count,0)
+from
+(
+    select
+        coupon_id,
+        get_last_1d_count,
+        get_last_7d_count,
+        get_last_30d_count,
+        get_count,
+        order_last_1d_count,
+        order_last_1d_reduce_amount,
+        order_last_1d_original_amount,
+        order_last_1d_final_amount,
+        order_last_7d_count,
+        order_last_7d_reduce_amount,
+        order_last_7d_original_amount,
+        order_last_7d_final_amount,
+        order_last_30d_count,
+        order_last_30d_reduce_amount,
+        order_last_30d_original_amount,
+        order_last_30d_final_amount,
+        order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_last_1d_count,
+        payment_last_1d_reduce_amount,
+        payment_last_1d_amount,
+        payment_last_7d_count,
+        payment_last_7d_reduce_amount,
+        payment_last_7d_amount,
+        payment_last_30d_count,
+        payment_last_30d_reduce_amount,
+        payment_last_30d_amount,
+        payment_count,
+        payment_reduce_amount,
+        payment_amount,
+        expire_last_1d_count,
+        expire_last_7d_count,
+        expire_last_30d_count,
+        expire_count
+    from ${APP}.dwt_coupon_topic
+    where dt=date_add('$do_date',-1)
+)old
+full outer join
+(
+    select
+        coupon_id,
+        get_count,
+        order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_reduce_amount,
+        payment_amount,
+        expire_count
+    from ${APP}.dws_coupon_info_daycount
+    where dt='$do_date'
+)1d_ago
+on old.coupon_id=1d_ago.coupon_id
+left join
+(
+    select
+        coupon_id,
+        get_count,
+        order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_reduce_amount,
+        payment_amount,
+        expire_count
+    from ${APP}.dws_coupon_info_daycount
+    where dt=date_add('$do_date',-7)
+)7d_ago
+on old.coupon_id=7d_ago.coupon_id
+left join
+(
+    select
+        coupon_id,
+        get_count,
+        order_count,
+        order_reduce_amount,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_reduce_amount,
+        payment_amount,
+        expire_count
+    from ${APP}.dws_coupon_info_daycount
+    where dt=date_add('$do_date',-30)
+)30d_ago
+on old.coupon_id=30d_ago.coupon_id;
+alter table ${APP}.dwt_coupon_topic drop partition(dt='$clear_date');
+"
+
+dwt_area_topic="
+insert overwrite table ${APP}.dwt_area_topic partition(dt='$do_date')
+select
+    nvl(old.province_id, 1d_ago.province_id),
+    nvl(1d_ago.visit_count,0),
+    nvl(1d_ago.login_count,0),
+    nvl(old.visit_last_7d_count,0)+nvl(1d_ago.visit_count,0)- nvl(7d_ago.visit_count,0),
+    nvl(old.login_last_7d_count,0)+nvl(1d_ago.login_count,0)- nvl(7d_ago.login_count,0),
+    nvl(old.visit_last_30d_count,0)+nvl(1d_ago.visit_count,0)- nvl(30d_ago.visit_count,0),
+    nvl(old.login_last_30d_count,0)+nvl(1d_ago.login_count,0)- nvl(30d_ago.login_count,0),
+    nvl(old.visit_count,0)+nvl(1d_ago.visit_count,0),
+    nvl(old.login_count,0)+nvl(1d_ago.login_count,0),
+    nvl(1d_ago.order_count,0),
+    nvl(1d_ago.order_original_amount,0.0),
+    nvl(1d_ago.order_final_amount,0.0),
+    nvl(old.order_last_7d_count,0)+nvl(1d_ago.order_count,0)- nvl(7d_ago.order_count,0),
+    nvl(old.order_last_7d_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0)- nvl(7d_ago.order_original_amount,0.0),
+    nvl(old.order_last_7d_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0)- nvl(7d_ago.order_final_amount,0.0),
+    nvl(old.order_last_30d_count,0)+nvl(1d_ago.order_count,0)- nvl(30d_ago.order_count,0),
+    nvl(old.order_last_30d_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0)- nvl(30d_ago.order_original_amount,0.0),
+    nvl(old.order_last_30d_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0)- nvl(30d_ago.order_final_amount,0.0),
+    nvl(old.order_count,0)+nvl(1d_ago.order_count,0),
+    nvl(old.order_original_amount,0.0)+nvl(1d_ago.order_original_amount,0.0),
+    nvl(old.order_final_amount,0.0)+nvl(1d_ago.order_final_amount,0.0),
+    nvl(1d_ago.payment_count,0),
+    nvl(1d_ago.payment_amount,0.0),
+    nvl(old.payment_last_7d_count,0)+nvl(1d_ago.payment_count,0)- nvl(7d_ago.payment_count,0),
+    nvl(old.payment_last_7d_amount,0.0)+nvl(1d_ago.payment_amount,0.0)- nvl(7d_ago.payment_amount,0.0),
+    nvl(old.payment_last_30d_count,0)+nvl(1d_ago.payment_count,0)- nvl(30d_ago.payment_count,0),
+    nvl(old.payment_last_30d_amount,0.0)+nvl(1d_ago.payment_amount,0.0)- nvl(30d_ago.payment_amount,0.0),
+    nvl(old.payment_count,0)+nvl(1d_ago.payment_count,0),
+    nvl(old.payment_amount,0.0)+nvl(1d_ago.payment_amount,0.0),
+    nvl(1d_ago.refund_order_count,0),
+    nvl(1d_ago.refund_order_amount,0.0),
+    nvl(old.refund_order_last_7d_count,0)+nvl(1d_ago.refund_order_count,0)- nvl(7d_ago.refund_order_count,0),
+    nvl(old.refund_order_last_7d_amount,0.0)+nvl(1d_ago.refund_order_amount,0.0)- nvl(7d_ago.refund_order_amount,0.0),
+    nvl(old.refund_order_last_30d_count,0)+nvl(1d_ago.refund_order_count,0)- nvl(30d_ago.refund_order_count,0),
+    nvl(old.refund_order_last_30d_amount,0.0)+nvl(1d_ago.refund_order_amount,0.0)- nvl(30d_ago.refund_order_amount,0.0),
+    nvl(old.refund_order_count,0)+nvl(1d_ago.refund_order_count,0),
+    nvl(old.refund_order_amount,0.0)+nvl(1d_ago.refund_order_amount,0.0),
+    nvl(1d_ago.refund_payment_count,0),
+    nvl(1d_ago.refund_payment_amount,0.0),
+    nvl(old.refund_payment_last_7d_count,0)+nvl(1d_ago.refund_payment_count,0)- nvl(7d_ago.refund_payment_count,0),
+    nvl(old.refund_payment_last_7d_amount,0.0)+nvl(1d_ago.refund_payment_amount,0.0)- nvl(7d_ago.refund_payment_amount,0.0),
+    nvl(old.refund_payment_last_30d_count,0)+nvl(1d_ago.refund_payment_count,0)- nvl(30d_ago.refund_payment_count,0),
+    nvl(old.refund_payment_last_30d_amount,0.0)+nvl(1d_ago.refund_payment_amount,0.0)- nvl(30d_ago.refund_payment_amount,0.0),
+    nvl(old.refund_payment_count,0)+nvl(1d_ago.refund_payment_count,0),
+    nvl(old.refund_payment_amount,0.0)+nvl(1d_ago.refund_payment_amount,0.0)
+
+from
+(
+    select
+        province_id,
+        visit_last_1d_count,
+        login_last_1d_count,
+        visit_last_7d_count,
+        login_last_7d_count,
+        visit_last_30d_count,
+        login_last_30d_count,
+        visit_count,
+        login_count,
+        order_last_1d_count,
+        order_last_1d_original_amount,
+        order_last_1d_final_amount,
+        order_last_7d_count,
+        order_last_7d_original_amount,
+        order_last_7d_final_amount,
+        order_last_30d_count,
+        order_last_30d_original_amount,
+        order_last_30d_final_amount,
+        order_count,
+        order_original_amount,
+        order_final_amount,
+        payment_last_1d_count,
+        payment_last_1d_amount,
+        payment_last_7d_count,
+        payment_last_7d_amount,
+        payment_last_30d_count,
+        payment_last_30d_amount,
+        payment_count,
+        payment_amount,
+        refund_order_last_1d_count,
+        refund_order_last_1d_amount,
+        refund_order_last_7d_count,
+        refund_order_last_7d_amount,
+        refund_order_last_30d_count,
+        refund_order_last_30d_amount,
+        refund_order_count,
+        refund_order_amount,
+        refund_payment_last_1d_count,
+        refund_payment_last_1d_amount,
+        refund_payment_last_7d_count,
+        refund_payment_last_7d_amount,
+        refund_payment_last_30d_count,
+        refund_payment_last_30d_amount,
+        refund_payment_count,
+        refund_payment_amount
+    from ${APP}.dwt_area_topic
+    where dt=date_add('$do_date',-1)
+)old
+full outer join
+(
+    select
+        province_id,
+        visit_count,
+        login_count,
+        order_count,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_amount,
+        refund_order_count,
+        refund_order_amount,
+        refund_payment_count,
+        refund_payment_amount
+    from ${APP}.dws_area_stats_daycount
+    where dt='$do_date'
+)1d_ago
+on old.province_id=1d_ago.province_id
+left join
+(
+    select
+        province_id,
+        visit_count,
+        login_count,
+        order_count,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_amount,
+        refund_order_count,
+        refund_order_amount,
+        refund_payment_count,
+        refund_payment_amount
+    from ${APP}.dws_area_stats_daycount
+    where dt=date_add('$do_date',-7)
+)7d_ago
+on old.province_id= 7d_ago.province_id
+left join
+(
+    select
+        province_id,
+        visit_count,
+        login_count,
+        order_count,
+        order_original_amount,
+        order_final_amount,
+        payment_count,
+        payment_amount,
+        refund_order_count,
+        refund_order_amount,
+        refund_payment_count,
+        refund_payment_amount
+    from ${APP}.dws_area_stats_daycount
+    where dt=date_add('$do_date',-30)
+)30d_ago
+on old.province_id= 30d_ago.province_id;
+alter table ${APP}.dwt_area_topic drop partition(dt='$clear_date');
+"
+
+
+case $1 in
+    "dwt_visitor_topic" )
+        hive -e "$dwt_visitor_topic"
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_visitor_topic/dt=$clear_date
+    ;;
+    "dwt_user_topic" )
+        hive -e "$dwt_user_topic"
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_user_topic/dt=$clear_date
+    ;;
+    "dwt_sku_topic" )
+        hive -e "$dwt_sku_topic"
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_sku_topic/dt=$clear_date
+    ;;
+    "dwt_activity_topic" )
+        hive -e "$dwt_activity_topic"
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_activity_topic/dt=$clear_date
+    ;;
+    "dwt_coupon_topic" )
+        hive -e "$dwt_coupon_topic"
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_coupon_topic/dt=$clear_date
+    ;;
+    "dwt_area_topic" )
+        hive -e "$dwt_area_topic"
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_area_topic/dt=$clear_date
+    ;;
+    "all" )
+        hive -e "$dwt_visitor_topic$dwt_user_topic$dwt_sku_topic$dwt_activity_topic$dwt_coupon_topic$dwt_area_topic"
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_visitor_topic/dt=$clear_date
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_user_topic/dt=$clear_date
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_sku_topic/dt=$clear_date
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_activity_topic/dt=$clear_date
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_coupon_topic/dt=$clear_date
+        hadoop fs -rm -r -f /warehouse/gmall/dwt/dwt_area_topic/dt=$clear_date
+    ;;
+esac
+```
+
+修改权限
+
+chmod +x bin/dws_to_dwt.sh
+
+执行脚本
+
+dws_to_dwt.sh all 2020-06-15
+
+### ADS层
+
+ADS层不涉及建模，建表根据具体需求而定。
+
+#### 访客主题
+
+##### 访客统计
+
+该需求为访客综合统计，其中包含若干指标，以下为对每个指标的解释说明。
+
+| 指标             | 说明                                   | 对应字段         |
+| ---------------- | -------------------------------------- | ---------------- |
+| 访客数           | 统计访问人数                           | uv_count         |
+| 页面停留时长     | 统计所有页面访问记录总时长，以秒为单位 | duration_sec     |
+| 平均页面停留时长 | 统计每个会话平均停留时长，以秒为单位   | avg_duration_sec |
+| 页面浏览总数     | 统计所有页面访问记录总数               | page_count       |
+| 平均页面浏览数   | 统计每个会话平均浏览页面数             | avg_page_count   |
+| 会话总数         | 统计会话总数                           | sv_count         |
+| 跳出数           | 统计只浏览一个页面的会话个数           | bounce_count     |
+| 跳出率           | 只有一个页面的会话的比例               | bounce_rate      |
+
+**1.建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_visit_stats;
+CREATE EXTERNAL TABLE ads_visit_stats (
+  `dt` STRING COMMENT '统计日期',
+  `is_new` STRING COMMENT '新老标识,1:新,0:老',
+  `recent_days` BIGINT COMMENT '最近天数,1:最近1天,7:最近7天,30:最近30天',
+  `channel` STRING COMMENT '渠道',
+  `uv_count` BIGINT COMMENT '日活(访问人数)',
+  `duration_sec` BIGINT COMMENT '页面停留总时长',
+  `avg_duration_sec` BIGINT COMMENT '一次会话，页面停留平均时长,单位为描述',
+  `page_count` BIGINT COMMENT '页面总浏览数',
+  `avg_page_count` BIGINT COMMENT '一次会话，页面平均浏览数',
+  `sv_count` BIGINT COMMENT '会话次数',
+  `bounce_count` BIGINT COMMENT '跳出数',
+  `bounce_rate` DECIMAL(16,2) COMMENT '跳出率'
+) COMMENT '访客统计'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_visit_stats/';
+```
+
+**2.数据装载**
+
+**思路分析：该需求的关键点为会话的划分，总体实现思路可分为以下几步：**
+
+**第一步：对所有页面访问记录进行会话的划分。**
+
+**第二步：统计每个会话的浏览时长和浏览页面数。**
+
+**第三步：统计上述各指标。**
+
+```sql
+insert overwrite table ads_visit_stats
+select * from ads_visit_stats
+union
+select
+    '2020-06-14' dt,
+    is_new,
+    recent_days,
+    channel,
+    count(distinct(mid_id)) uv_count,
+    cast(sum(duration)/1000 as bigint) duration_sec,
+    cast(avg(duration)/1000 as bigint) avg_duration_sec,
+    sum(page_count) page_count,
+    cast(avg(page_count) as bigint) avg_page_count,
+    count(*) sv_count,
+    sum(if(page_count=1,1,0)) bounce_count,
+    cast(sum(if(page_count=1,1,0))/count(*)*100 as decimal(16,2)) bounce_rate
+from
+(
+    select
+        session_id,
+        mid_id,
+        is_new,
+        recent_days,
+        channel,
+        count(*) page_count,
+        sum(during_time) duration
+    from
+    (
+        select
+            mid_id,
+            channel,
+            recent_days,
+            is_new,
+            last_page_id,
+            page_id,
+            during_time,
+            concat(mid_id,'-',last_value(if(last_page_id is null,ts,null),true) over (partition by recent_days,mid_id order by ts)) session_id
+        from
+        (
+            select
+                mid_id,
+                channel,
+                last_page_id,
+                page_id,
+                during_time,
+                ts,
+                recent_days,
+                if(visit_date_first>=date_add('2020-06-14',-recent_days+1),'1','0') is_new
+            from
+            (
+                select
+                    t1.mid_id,
+                    t1.channel,
+                    t1.last_page_id,
+                    t1.page_id,
+                    t1.during_time,
+                    t1.dt,
+                    t1.ts,
+                    t2.visit_date_first
+                from
+                (
+                    select
+                        mid_id,
+                        channel,
+                        last_page_id,
+                        page_id,
+                        during_time,
+                        dt,
+                        ts
+                    from dwd_page_log
+                    where dt>=date_add('2020-06-14',-30)
+                )t1
+                left join
+                (
+                    select
+                        mid_id,
+                        visit_date_first
+                    from dwt_visitor_topic
+                    where dt='2020-06-14'
+                )t2
+                on t1.mid_id=t2.mid_id
+            )t3 lateral view explode(Array(1,7,30)) tmp as recent_days
+            where dt>=date_add('2020-06-14',-recent_days+1)
+        )t4
+    )t5
+    group by session_id,mid_id,is_new,recent_days,channel
+)t6
+group by is_new,recent_days,channel;
+```
+
+
+
+##### 路径分析
+
+顾名思义，就是指用户在APP或网站中的访问路径。为了衡量网站优化的效果或营销推广的效果，以及了解用户行为偏好，时常要对访问路径进行分析。
+
+用户访问路径的可视化通常使用桑基图。如下图所示，该图可真实还原用户的访问路径，包括页面跳转和页面访问次序。
+
+桑基图需要我们提供每种页面跳转的次数，每个跳转由source/target表示，source指跳转起始页面，target表示跳转终到页面。
+
+**1.建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_page_path;
+CREATE EXTERNAL TABLE ads_page_path
+(
+    `dt` STRING COMMENT '统计日期',
+    `recent_days` BIGINT COMMENT '最近天数,1:最近1天,7:最近7天,30:最近30天',
+    `source` STRING COMMENT '跳转起始页面ID',
+    `target` STRING COMMENT '跳转终到页面ID',
+    `path_count` BIGINT COMMENT '跳转次数'
+)  COMMENT '页面浏览路径'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_page_path/';
+```
+
+**2.数据装载**
+
+**思路分析：该需求要统计的就是每种跳转的次数，故理论上对source/target进行分组count()即可。统计时需注意以下两点：**
+
+**第一点：桑基图的source不允许为空，但target可为空。**
+
+**第二点：桑基图所展示的流程不允许存在环。**
+
+```sql
+insert overwrite table ads_page_path
+select * from ads_page_path
+union
+select
+    '2020-06-14',
+    recent_days,
+    source,
+    target,
+    count(*)
+from
+(
+    select
+        recent_days,
+        concat('step-',step,':',source) source,
+        concat('step-',step+1,':',target) target
+    from
+    (
+        select
+            recent_days,
+            page_id source,
+            lead(page_id,1,null) over (partition by recent_days,session_id order by ts) target,
+            row_number() over (partition by recent_days,session_id order by ts) step
+        from
+        (
+            select
+                recent_days,
+                last_page_id,
+                page_id,
+                ts,
+                concat(mid_id,'-',last_value(if(last_page_id is null,ts,null),true) over (partition by mid_id,recent_days order by ts)) session_id
+            from dwd_page_log lateral view explode(Array(1,7,30)) tmp as recent_days
+            where dt>=date_add('2020-06-14',-30)
+            and dt>=date_add('2020-06-14',-recent_days+1)
+        )t2
+    )t3
+)t4
+group by recent_days,source,target;
+```
+
+#### 用户主题
+
+该需求为用户综合统计，其中包含若干指标，以下为对每个指标的解释说明。
+
+| 指标           | 说明                   | 对应字段             |
+| -------------- | ---------------------- | -------------------- |
+| 新增用户数     | 统计新增注册用户人数   | new_user_count       |
+| 新增下单用户数 | 统计新增下单用户人数   | new_order_user_count |
+| 下单总金额     | 统计所有订单总额       | order_final_amount   |
+| 下单用户数     | 统计下单用户总数       | order_user_count     |
+| 未下单用户数   | 统计活跃但未下单用户数 | no_order_user_count  |
+
+##### 用户统计
+
+**1.建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_user_total;
+CREATE EXTERNAL TABLE `ads_user_total` (
+  `dt` STRING COMMENT '统计日期',
+  `recent_days` BIGINT COMMENT '最近天数,0:累积值,1:最近1天,7:最近7天,30:最近30天',
+  `new_user_count` BIGINT COMMENT '新注册用户数',
+  `new_order_user_count` BIGINT COMMENT '新增下单用户数',
+  `order_final_amount` DECIMAL(16,2) COMMENT '下单总金额',
+  `order_user_count` BIGINT COMMENT '下单用户数',
+  `no_order_user_count` BIGINT COMMENT '未下单用户数(具体指活跃用户中未下单用户)'
+) COMMENT '用户统计'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_user_total/';
+```
+
+**2.数据装载**
+
+```sql
+insert overwrite table ads_user_total
+select * from ads_user_total
+union
+select
+    '2020-06-14',
+    recent_days,
+    sum(if(login_date_first>=recent_days_ago,1,0)) new_user_count,
+    sum(if(order_date_first>=recent_days_ago,1,0)) new_order_user_count,
+    sum(order_final_amount) order_final_amount,
+    sum(if(order_final_amount>0,1,0)) order_user_count,
+    sum(if(login_date_last>=recent_days_ago and order_final_amount=0,1,0)) no_order_user_count
+from
+(
+    select
+        recent_days,
+        user_id,
+        login_date_first,
+        login_date_last,
+        order_date_first,
+        case when recent_days=0 then order_final_amount
+             when recent_days=1 then order_last_1d_final_amount
+             when recent_days=7 then order_last_7d_final_amount
+             when recent_days=30 then order_last_30d_final_amount
+        end order_final_amount,
+        if(recent_days=0,'1970-01-01',date_add('2020-06-14',-recent_days+1)) recent_days_ago
+    from dwt_user_topic lateral view explode(Array(0,1,7,30)) tmp as recent_days
+    where dt='2020-06-14'
+)t1
+group by recent_days;
+```
+
+##### 用户变动统计
+
+该需求包括两个指标，分别为流失用户数和回流用户数，以下为对两个指标的解释说明。
+
+| 指标       | 说明                                                         | 对应字段             |
+| ---------- | ------------------------------------------------------------ | -------------------- |
+| 流失用户数 | 之前活跃过的用户，最近一段时间未活跃，就称为流失用户。此处要求统计7日前（只包含7日前当天）活跃，但最近7日未活跃的用户总数。 | user_churn_count     |
+| 回流用户数 | 之前的活跃用户，一段时间未活跃（流失），今日又活跃了，就称为回流用户。此处要求统计回流用户总数。 | new_order_user_count |
+
+**1.建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_user_change;
+CREATE EXTERNAL TABLE `ads_user_change` (
+  `dt` STRING COMMENT '统计日期',
+  `user_churn_count` BIGINT COMMENT '流失用户数',
+  `user_back_count` BIGINT COMMENT '回流用户数'
+) COMMENT '用户变动统计'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_user_change/';
+```
+
+
+
+**2.数据装载**
+
+**思路分析：**
+
+**流失用户：末次活跃时间为7日前的用户即为流失用户。**
+
+**回流用户：末次活跃时间为今日，上次活跃时间在8日前的用户即为回流用户。**
+
+```sql
+insert overwrite table ads_user_change
+select * from ads_user_change
+union
+select
+    churn.dt,
+    user_churn_count,
+    user_back_count
+from
+(
+    select
+        '2020-06-14' dt,
+        count(*) user_churn_count
+    from dwt_user_topic
+    where dt='2020-06-14'
+    and login_date_last=date_add('2020-06-14',-7)
+)churn
+join
+(
+    select
+        '2020-06-14' dt,
+        count(*) user_back_count
+    from
+    (
+        select
+            user_id,
+            login_date_last
+        from dwt_user_topic
+        where dt='2020-06-14'
+        and login_date_last='2020-06-14'
+    )t1
+    join
+    (
+        select
+            user_id,
+            login_date_last login_date_previous
+        from dwt_user_topic
+        where dt=date_add('2020-06-14',-1)
+    )t2
+    on t1.user_id=t2.user_id
+    where datediff(login_date_last,login_date_previous)>=8
+)back
+on churn.dt=back.dt;
+```
+
+##### 用户行为漏斗分析
+
+漏斗分析是一个数据分析模型，它能够科学反映一个业务过程从起点到终点各阶段用户转化情况。由于其能将各阶段环节都展示出来，故哪个阶段存在问题，就能一目了然。
+
+该需求要求统计一个完整的购物流程各个阶段的人数。
+
+**1.建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_user_action;
+CREATE EXTERNAL TABLE `ads_user_action` (
+  `dt` STRING COMMENT '统计日期',
+  `recent_days` BIGINT COMMENT '最近天数,1:最近1天,7:最近7天,30:最近30天',
+  `home_count` BIGINT COMMENT '浏览首页人数',
+  `good_detail_count` BIGINT COMMENT '浏览商品详情页人数',
+  `cart_count` BIGINT COMMENT '加入购物车人数',
+  `order_count` BIGINT COMMENT '下单人数',
+  `payment_count` BIGINT COMMENT '支付人数'
+) COMMENT '漏斗分析'
+ROW FORMAT DELIMITED  FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_user_action/';
+```
+
+**2.数据装载**
+
+```sql
+with
+tmp_page as
+(
+    select
+        '2020-06-14' dt,
+        recent_days,
+        sum(if(array_contains(pages,'home'),1,0)) home_count,
+        sum(if(array_contains(pages,'good_detail'),1,0)) good_detail_count
+    from
+    (
+        select
+            recent_days,
+            mid_id,
+            collect_set(page_id) pages
+        from
+        (
+            select
+                dt,
+                mid_id,
+                page.page_id
+            from dws_visitor_action_daycount lateral view explode(page_stats) tmp as page
+            where dt>=date_add('2020-06-14',-29)
+            and page.page_id in('home','good_detail')
+        )t1 lateral view explode(Array(1,7,30)) tmp as recent_days
+        where dt>=date_add('2020-06-14',-recent_days+1)
+        group by recent_days,mid_id
+    )t2
+    group by recent_days
+),
+tmp_cop as
+(
+    select
+        '2020-06-14' dt,
+        recent_days,
+        sum(if(cart_count>0,1,0)) cart_count,
+        sum(if(order_count>0,1,0)) order_count,
+        sum(if(payment_count>0,1,0)) payment_count
+    from
+    (
+        select
+            recent_days,
+            user_id,
+            case
+                when recent_days=1 then cart_last_1d_count
+                when recent_days=7 then cart_last_7d_count
+                when recent_days=30 then cart_last_30d_count
+            end cart_count,
+            case
+                when recent_days=1 then order_last_1d_count
+                when recent_days=7 then order_last_7d_count
+                when recent_days=30 then order_last_30d_count
+            end order_count,
+            case
+                when recent_days=1 then payment_last_1d_count
+                when recent_days=7 then payment_last_7d_count
+                when recent_days=30 then payment_last_30d_count
+            end payment_count
+        from dwt_user_topic lateral view explode(Array(1,7,30)) tmp as recent_days
+        where dt='2020-06-14'
+    )t1
+    group by recent_days
+)
+insert overwrite table ads_user_action
+select * from ads_user_action
+union
+select
+    tmp_page.dt,
+    tmp_page.recent_days,
+    home_count,
+    good_detail_count,
+    cart_count,
+    order_count,
+    payment_count
+from tmp_page
+join tmp_cop
+on tmp_page.recent_days=tmp_cop.recent_days;
+```
+
+##### 用户留存率
+
+留存分析一般包含新增留存和活跃留存分析。
+
+新增留存分析是分析某天的新增用户中，有多少人有后续的活跃行为。活跃留存分析是分析某天的活跃用户中，有多少人有后续的活跃行为。
+
+留存分析是衡量产品对用户价值高低的重要指标。
+
+此处要求统计新增留存率，新增留存率具体是指留存用户数与新增用户数的比值，例如2020-06-14新增100个用户，1日之后（2020-06-15）这100人中有80个人活跃了，那2020-06-14的1日留存数则为80，2020-06-14的1日留存率则为80%。
+
+要求统计每天的1至7日留存率，如下图所示。
+
+**1.建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_user_retention;
+CREATE EXTERNAL TABLE ads_user_retention (
+  `dt` STRING COMMENT '统计日期',
+  `create_date` STRING COMMENT '用户新增日期',
+  `retention_day` BIGINT COMMENT '截至当前日期留存天数',
+  `retention_count` BIGINT COMMENT '留存用户数量',
+  `new_user_count` BIGINT COMMENT '新增用户数量',
+  `retention_rate` DECIMAL(16,2) COMMENT '留存率'
+) COMMENT '用户留存率'
+ROW FORMAT DELIMITED  FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_user_retention/';
+```
+
+**2.数据装载**
+
+```sql
+insert overwrite table ads_user_retention
+select * from ads_user_retention
+union
+select
+    '2020-06-14',
+    login_date_first create_date,
+    datediff('2020-06-14',login_date_first) retention_day,
+    sum(if(login_date_last='2020-06-14',1,0)) retention_count,
+    count(*) new_user_count,
+    cast(sum(if(login_date_last='2020-06-14',1,0))/count(*)*100 as decimal(16,2)) retention_rate
+from dwt_user_topic
+where dt='2020-06-14'
+and login_date_first>=date_add('2020-06-14',-7)
+and login_date_first<'2020-06-14'
+group by login_date_first;
+```
+
+#### 商品主题
+
+##### 商品统计
+
+该指标为商品综合统计，包含每个spu被下单总次数和被下单总金额。
+
+**建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_order_spu_stats;
+CREATE EXTERNAL TABLE `ads_order_spu_stats` (
+    `dt` STRING COMMENT '统计日期',
+    `recent_days` BIGINT COMMENT '最近天数,1:最近1天,7:最近7天,30:最近30天',
+    `spu_id` STRING COMMENT '商品ID',
+    `spu_name` STRING COMMENT '商品名称',
+    `tm_id` STRING COMMENT '品牌ID',
+    `tm_name` STRING COMMENT '品牌名称',
+    `category3_id` STRING COMMENT '三级品类ID',
+    `category3_name` STRING COMMENT '三级品类名称',
+    `category2_id` STRING COMMENT '二级品类ID',
+    `category2_name` STRING COMMENT '二级品类名称',
+    `category1_id` STRING COMMENT '一级品类ID',
+    `category1_name` STRING COMMENT '一级品类名称',
+    `order_count` BIGINT COMMENT '订单数',
+    `order_amount` DECIMAL(16,2) COMMENT '订单金额'
+) COMMENT '商品销售统计'
+ROW FORMAT DELIMITED  FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_order_spu_stats/';
+```
+
+**数据装载**
+
+```sql
+insert overwrite table ads_order_spu_stats
+select * from ads_order_spu_stats
+union
+select
+    '2020-06-14' dt,
+    recent_days,
+    spu_id,
+    spu_name,
+    tm_id,
+    tm_name,
+    category3_id,
+    category3_name,
+    category2_id,
+    category2_name,
+    category1_id,
+    category1_name,
+    sum(order_count),
+    sum(order_amount)
+from
+(
+    select
+        recent_days,
+        sku_id,
+        case
+            when recent_days=1 then order_last_1d_count
+            when recent_days=7 then order_last_7d_count
+            when recent_days=30 then order_last_30d_count
+        end order_count,
+        case
+            when recent_days=1 then order_last_1d_final_amount
+            when recent_days=7 then order_last_7d_final_amount
+            when recent_days=30 then order_last_30d_final_amount
+        end order_amount
+    from dwt_sku_topic lateral view explode(Array(1,7,30)) tmp as recent_days
+    where dt='2020-06-14'
+)t1
+left join
+(
+    select
+        id,
+        spu_id,
+        spu_name,
+        tm_id,
+        tm_name,
+        category3_id,
+        category3_name,
+        category2_id,
+        category2_name,
+        category1_id,
+        category1_name
+    from dim_sku_info
+    where dt='2020-06-14'
+)t2
+on t1.sku_id=t2.id
+group by recent_days,spu_id,spu_name,tm_id,tm_name,category3_id,category3_name,category2_id,category2_name,category1_id,category1_name;
+```
+
+##### 品牌复购率
+
+品牌复购率是指一段时间内重复购买某品牌的人数与购买过该品牌的人数的比值。重复购买即购买次数大于等于2，购买过即购买次数大于1。
+
+此处要求统计最近1,7,30天的各品牌复购率。
+
+**建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_repeat_purchase;
+CREATE EXTERNAL TABLE `ads_repeat_purchase` (
+  `dt` STRING COMMENT '统计日期',
+  `recent_days` BIGINT COMMENT '最近天数,1:最近1天,7:最近7天,30:最近30天',
+  `tm_id` STRING COMMENT '品牌ID',
+  `tm_name` STRING COMMENT '品牌名称',
+  `order_repeat_rate` DECIMAL(16,2) COMMENT '复购率'
+) COMMENT '品牌复购率'
+ROW FORMAT DELIMITED  FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_repeat_purchase/';
+```
+
+**数据装载**
+
+**思路分析：该需求可分两步实现：**
+
+**第一步：统计每个用户购买每个品牌的次数。**
+
+**第二步：分别统计购买次数大于1的人数和大于2的人数。**
+
+```shell
+insert overwrite table ads_repeat_purchase
+select * from ads_repeat_purchase
+union
+select
+    '2020-06-14' dt,
+    recent_days,
+    tm_id,
+    tm_name,
+    cast(sum(if(order_count>=2,1,0))/sum(if(order_count>=1,1,0))*100 as decimal(16,2))
+from
+(
+    select
+        recent_days,
+        user_id,
+        tm_id,
+        tm_name,
+        sum(order_count) order_count
+    from
+    (
+        select
+            recent_days,
+            user_id,
+            sku_id,
+            count(*) order_count
+        from dwd_order_detail lateral view explode(Array(1,7,30)) tmp as recent_days
+        where dt>=date_add('2020-06-14',-29)
+        and dt>=date_add('2020-06-14',-recent_days+1)
+        group by recent_days, user_id,sku_id
+    )t1
+    left join
+    (
+        select
+            id,
+            tm_id,
+            tm_name
+        from dim_sku_info
+        where dt='2020-06-14'
+    )t2
+    on t1.sku_id=t2.id
+    group by recent_days,user_id,tm_id,tm_name
+)t3
+group by recent_days,tm_id,tm_name;
+```
+
+#### 订单主题
+
+##### 订单统计
+
+该需求包含订单总数，订单总金额和下单总人数。
+
+**建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_order_total;
+CREATE EXTERNAL TABLE `ads_order_total` (
+  `dt` STRING COMMENT '统计日期',
+  `recent_days` BIGINT COMMENT '最近天数,1:最近1天,7:最近7天,30:最近30天',
+  `order_count` BIGINT COMMENT '订单数',
+  `order_amount` DECIMAL(16,2) COMMENT '订单金额',
+  `order_user_count` BIGINT COMMENT '下单人数'
+) COMMENT '订单统计'
+ROW FORMAT DELIMITED  FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_order_total/';
+```
+
+**数据装载**
+
+```shell
+insert overwrite table ads_order_total
+select * from ads_order_total
+union
+select
+    '2020-06-14',
+    recent_days,
+    sum(order_count),
+    sum(order_final_amount) order_final_amount,
+    sum(if(order_final_amount>0,1,0)) order_user_count
+from
+(
+    select
+        recent_days,
+        user_id,
+        case when recent_days=0 then order_count
+             when recent_days=1 then order_last_1d_count
+             when recent_days=7 then order_last_7d_count
+             when recent_days=30 then order_last_30d_count
+        end order_count,
+        case when recent_days=0 then order_final_amount
+             when recent_days=1 then order_last_1d_final_amount
+             when recent_days=7 then order_last_7d_final_amount
+             when recent_days=30 then order_last_30d_final_amount
+        end order_final_amount
+    from dwt_user_topic lateral view explode(Array(1,7,30)) tmp as recent_days
+    where dt='2020-06-14'
+)t1
+group by recent_days;
+```
+
+##### 各地区订单统计
+
+**建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_order_by_province;
+CREATE EXTERNAL TABLE `ads_order_by_province` (
+  `dt` STRING COMMENT '统计日期',
+  `recent_days` BIGINT COMMENT '最近天数,1:最近1天,7:最近7天,30:最近30天',
+  `province_id` STRING COMMENT '省份ID',
+  `province_name` STRING COMMENT '省份名称',
+  `area_code` STRING COMMENT '地区编码',
+  `iso_code` STRING COMMENT '国际标准地区编码',
+  `iso_code_3166_2` STRING COMMENT '国际标准地区编码',
+  `order_count` BIGINT COMMENT '订单数',
+  `order_amount` DECIMAL(16,2) COMMENT '订单金额'
+) COMMENT '各地区订单统计'
+ROW FORMAT DELIMITED  FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_order_by_province/';
+```
+
+**数据装载**
+
+```shell
+insert overwrite table ads_order_by_province
+select * from ads_order_by_province
+union
+select
+    dt,
+    recent_days,
+    province_id,
+    province_name,
+    area_code,
+    iso_code,
+    iso_3166_2,
+    order_count,
+    order_amount
+from
+(
+    select
+        '2020-06-14' dt,
+        recent_days,
+        province_id,
+        sum(order_count) order_count,
+        sum(order_amount) order_amount
+    from
+    (
+        select
+            recent_days,
+            province_id,
+            case
+                when recent_days=1 then order_last_1d_count
+                when recent_days=7 then order_last_7d_count
+                when recent_days=30 then order_last_30d_count
+            end order_count,
+            case
+                when recent_days=1 then order_last_1d_final_amount
+                when recent_days=7 then order_last_7d_final_amount
+                when recent_days=30 then order_last_30d_final_amount
+            end order_amount
+        from dwt_area_topic lateral view explode(Array(1,7,30)) tmp as recent_days
+        where dt='2020-06-14'
+    )t1
+    group by recent_days,province_id
+)t2
+join dim_base_province t3
+on t2.province_id=t3.id;
+```
+
+#### 优惠券主题
+
+##### 优惠券统计
+
+**建表语句**
+
+该需求要求统计最近30日发布的所有优惠券的领用情况和补贴率，补贴率是指，优惠金额与使用优惠券的订单的原价金额的比值。
+
+```sql
+DROP TABLE IF EXISTS ads_coupon_stats;
+CREATE EXTERNAL TABLE ads_coupon_stats (
+  `dt` STRING COMMENT '统计日期',
+  `coupon_id` STRING COMMENT '优惠券ID',
+  `coupon_name` STRING COMMENT '优惠券名称',
+  `start_date` STRING COMMENT '发布日期',
+  `rule_name` STRING COMMENT '优惠规则，例如满100元减10元',
+  `get_count`  BIGINT COMMENT '领取次数',
+  `order_count` BIGINT COMMENT '使用(下单)次数',
+  `expire_count`  BIGINT COMMENT '过期次数',
+  `order_original_amount` DECIMAL(16,2) COMMENT '使用优惠券订单原始金额',
+  `order_final_amount` DECIMAL(16,2) COMMENT '使用优惠券订单最终金额',
+  `reduce_amount` DECIMAL(16,2) COMMENT '优惠金额',
+  `reduce_rate` DECIMAL(16,2) COMMENT '补贴率'
+) COMMENT '商品销售统计'
+ROW FORMAT DELIMITED  FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_coupon_stats/';
+```
+
+**数据装载**
+
+```shell
+insert overwrite table ads_coupon_stats
+select * from ads_coupon_stats
+union
+select
+    '2020-06-14' dt,
+    t1.id,
+    coupon_name,
+    start_date,
+    rule_name,
+    get_count,
+    order_count,
+    expire_count,
+    order_original_amount,
+    order_final_amount,
+    reduce_amount,
+    reduce_rate
+from
+(
+    select
+        id,
+        coupon_name,
+        date_format(start_time,'yyyy-MM-dd') start_date,
+        case
+            when coupon_type='3201' then concat('满',condition_amount,'元减',benefit_amount,'元')
+            when coupon_type='3202' then concat('满',condition_num,'件打', (1-benefit_discount)*10,'折')
+            when coupon_type='3203' then concat('减',benefit_amount,'元')
+        end rule_name
+    from dim_coupon_info
+    where dt='2020-06-14'
+    and date_format(start_time,'yyyy-MM-dd')>=date_add('2020-06-14',-29)
+)t1
+left join
+(
+    select
+        coupon_id,
+        get_count,
+        order_count,
+        expire_count,
+        order_original_amount,
+        order_final_amount,
+        order_reduce_amount reduce_amount,
+        cast(order_reduce_amount/order_original_amount as decimal(16,2)) reduce_rate
+    from dwt_coupon_topic
+    where dt='2020-06-14'
+)t2
+on t1.id=t2.coupon_id;
+```
+
+#### 活动主题
+
+##### 活动统计
+
+该需求要求统计最近30日发布的所有活动的参与情况和补贴率，补贴率是指，优惠金额与参与活动的订单原价金额的比值。
+
+**建表语句**
+
+```sql
+DROP TABLE IF EXISTS ads_activity_stats;
+CREATE EXTERNAL TABLE `ads_activity_stats` (
+  `dt` STRING COMMENT '统计日期',
+  `activity_id` STRING COMMENT '活动ID',
+  `activity_name` STRING COMMENT '活动名称',
+  `start_date` STRING COMMENT '活动开始日期',
+  `order_count` BIGINT COMMENT '参与活动订单数',
+  `order_original_amount` DECIMAL(16,2) COMMENT '参与活动订单原始金额',
+  `order_final_amount` DECIMAL(16,2) COMMENT '参与活动订单最终金额',
+  `reduce_amount` DECIMAL(16,2) COMMENT '优惠金额',
+  `reduce_rate` DECIMAL(16,2) COMMENT '补贴率'
+) COMMENT '商品销售统计'
+ROW FORMAT DELIMITED  FIELDS TERMINATED BY '\t'
+LOCATION '/warehouse/gmall/ads/ads_activity_stats/';
+```
+
+**数据装载**
+
+```shell
+insert overwrite table ads_activity_stats
+select * from ads_activity_stats
+union
+select
+    '2020-06-14' dt,
+    t4.activity_id,
+    activity_name,
+    start_date,
+    order_count,
+    order_original_amount,
+    order_final_amount,
+    reduce_amount,
+    reduce_rate
+from
+(
+    select
+        activity_id,
+        activity_name,
+        date_format(start_time,'yyyy-MM-dd') start_date
+    from dim_activity_rule_info
+    where dt='2020-06-14'
+    and date_format(start_time,'yyyy-MM-dd')>=date_add('2020-06-14',-29)
+    group by activity_id,activity_name,start_time
+)t4
+left join
+(
+    select
+        activity_id,
+        sum(order_count) order_count,
+        sum(order_original_amount) order_original_amount,
+        sum(order_final_amount) order_final_amount,
+        sum(order_reduce_amount) reduce_amount,
+        cast(sum(order_reduce_amount)/sum(order_original_amount)*100 as decimal(16,2)) reduce_rate
+    from dwt_activity_topic
+    where dt='2020-06-14'
+    group by activity_id
+)t5
+on t4.activity_id=t5.activity_id;
+```
+
+#### 数据加载脚本
+
+**编辑脚本**
+
+vi bin/dwt_to_ads.sh
+
+```shell
+#!/bin/bash
+
+APP=gmall
+
+# 如果是输入的日期按照取输入日期；如果没输入日期取当前时间的前一天
+if [ -n "$2" ] ;then
+    do_date=$2
+else 
+    do_date=`date -d "-1 day" +%F`
+fi
+
+ads_activity_stats="
+insert overwrite table ${APP}.ads_activity_stats
+select * from ${APP}.ads_activity_stats
+union
+select
+    '$do_date' dt,
+    t4.activity_id,
+    activity_name,
+    start_date,
+    order_count,
+    order_original_amount,
+    order_final_amount,
+    reduce_amount,
+    reduce_rate
+from
+(
+    select
+        activity_id,
+        activity_name,
+        date_format(start_time,'yyyy-MM-dd') start_date
+    from ${APP}.dim_activity_rule_info
+    where dt='$do_date'
+    and date_format(start_time,'yyyy-MM-dd')>=date_add('$do_date',-29)
+    group by activity_id,activity_name,start_time
+)t4
+left join
+(
+    select
+        activity_id,
+        sum(order_count) order_count,
+        sum(order_original_amount) order_original_amount,
+        sum(order_final_amount) order_final_amount,
+        sum(order_reduce_amount) reduce_amount,
+        cast(sum(order_reduce_amount)/sum(order_original_amount)*100 as decimal(16,2)) reduce_rate
+    from ${APP}.dwt_activity_topic
+    where dt='$do_date'
+    group by activity_id
+)t5
+on t4.activity_id=t5.activity_id;
+"
+ads_coupon_stats="
+insert overwrite table ${APP}.ads_coupon_stats
+select * from ${APP}.ads_coupon_stats
+union
+select
+    '$do_date' dt,
+    t1.id,
+    coupon_name,
+    start_date,
+    rule_name,
+    get_count,
+    order_count,
+    expire_count,
+    order_original_amount,
+    order_final_amount,
+    reduce_amount,
+    reduce_rate
+from
+(
+    select
+        id,
+        coupon_name,
+        date_format(start_time,'yyyy-MM-dd') start_date,
+        case
+            when coupon_type='3201' then concat('满',condition_amount,'元减',benefit_amount,'元')
+            when coupon_type='3202' then concat('满',condition_num,'件打', (1-benefit_discount)*10,'折')
+            when coupon_type='3203' then concat('减',benefit_amount,'元')
+        end rule_name
+    from ${APP}.dim_coupon_info
+    where dt='$do_date'
+    and date_format(start_time,'yyyy-MM-dd')>=date_add('$do_date',-29)
+)t1
+left join
+(
+    select
+        coupon_id,
+        get_count,
+        order_count,
+        expire_count,
+        order_original_amount,
+        order_final_amount,
+        order_reduce_amount reduce_amount,
+        cast(order_reduce_amount/order_original_amount as decimal(16,2)) reduce_rate
+    from ${APP}.dwt_coupon_topic
+    where dt='$do_date'
+)t2
+on t1.id=t2.coupon_id;
+"
+
+ads_order_by_province="
+insert overwrite table ${APP}.ads_order_by_province
+select * from ${APP}.ads_order_by_province
+union
+select
+    dt,
+    recent_days,
+    province_id,
+    province_name,
+    area_code,
+    iso_code,
+    iso_3166_2,
+    order_count,
+    order_amount
+from
+(
+    select
+        '$do_date' dt,
+        recent_days,
+        province_id,
+        sum(order_count) order_count,
+        sum(order_amount) order_amount
+    from
+    (
+        select
+            recent_days,
+            province_id,
+            case
+                when recent_days=1 then order_last_1d_count
+                when recent_days=7 then order_last_7d_count
+                when recent_days=30 then order_last_30d_count
+            end order_count,
+            case
+                when recent_days=1 then order_last_1d_final_amount
+                when recent_days=7 then order_last_7d_final_amount
+                when recent_days=30 then order_last_30d_final_amount
+            end order_amount
+        from ${APP}.dwt_area_topic lateral view explode(Array(1,7,30)) tmp as recent_days
+        where dt='$do_date'
+    )t1
+    group by recent_days,province_id
+)t2
+join ${APP}.dim_base_province t3
+on t2.province_id=t3.id;
+"
+
+ads_order_spu_stats="
+insert overwrite table ${APP}.ads_order_spu_stats
+select * from ${APP}.ads_order_spu_stats
+union
+select
+    '$do_date' dt,
+    recent_days,
+    spu_id,
+    spu_name,
+    tm_id,
+    tm_name,
+    category3_id,
+    category3_name,
+    category2_id,
+    category2_name,
+    category1_id,
+    category1_name,
+    sum(order_count),
+    sum(order_amount)
+from
+(
+    select
+        recent_days,
+        sku_id,
+        case
+            when recent_days=1 then order_last_1d_count
+            when recent_days=7 then order_last_7d_count
+            when recent_days=30 then order_last_30d_count
+        end order_count,
+        case
+            when recent_days=1 then order_last_1d_final_amount
+            when recent_days=7 then order_last_7d_final_amount
+            when recent_days=30 then order_last_30d_final_amount
+        end order_amount
+    from ${APP}.dwt_sku_topic lateral view explode(Array(1,7,30)) tmp as recent_days
+    where dt='$do_date'
+)t1
+left join
+(
+    select
+        id,
+        spu_id,
+        spu_name,
+        tm_id,
+        tm_name,
+        category3_id,
+        category3_name,
+        category2_id,
+        category2_name,
+        category1_id,
+        category1_name
+    from ${APP}.dim_sku_info
+    where dt='$do_date'
+)t2
+on t1.sku_id=t2.id
+group by recent_days,spu_id,spu_name,tm_id,tm_name,category3_id,category3_name,category2_id,category2_name,category1_id,category1_name;
+"
+
+ads_order_total="
+insert overwrite table ${APP}.ads_order_total
+select * from ${APP}.ads_order_total
+union
+select
+    '$do_date',
+    recent_days,
+    sum(order_count),
+    sum(order_final_amount) order_final_amount,
+    sum(if(order_final_amount>0,1,0)) order_user_count
+from
+(
+    select
+        recent_days,
+        user_id,
+        case when recent_days=0 then order_count
+             when recent_days=1 then order_last_1d_count
+             when recent_days=7 then order_last_7d_count
+             when recent_days=30 then order_last_30d_count
+        end order_count,
+        case when recent_days=0 then order_final_amount
+             when recent_days=1 then order_last_1d_final_amount
+             when recent_days=7 then order_last_7d_final_amount
+             when recent_days=30 then order_last_30d_final_amount
+        end order_final_amount
+    from ${APP}.dwt_user_topic lateral view explode(Array(1,7,30)) tmp as recent_days
+    where dt='$do_date'
+)t1
+group by recent_days;
+"
+
+ads_page_path="
+insert overwrite table ${APP}.ads_page_path
+select * from ${APP}.ads_page_path
+union
+select
+    '$do_date',
+    recent_days,
+    source,
+    target,
+    count(*)
+from
+(
+    select
+        recent_days,
+        concat('step-',step,':',source) source,
+        concat('step-',step+1,':',target) target
+    from
+    (
+        select
+            recent_days,
+            page_id source,
+            lead(page_id,1,null) over (partition by recent_days,session_id order by ts) target,
+            row_number() over (partition by recent_days,session_id order by ts) step
+        from
+        (
+            select
+                recent_days,
+                last_page_id,
+                page_id,
+                ts,
+                concat(mid_id,'-',last_value(if(last_page_id is null,ts,null),true) over (partition by mid_id,recent_days order by ts)) session_id
+            from ${APP}.dwd_page_log lateral view explode(Array(1,7,30)) tmp as recent_days
+            where dt>=date_add('$do_date',-30)
+            and dt>=date_add('$do_date',-recent_days+1)
+        )t2
+    )t3
+)t4
+group by recent_days,source,target;
+"
+
+ads_repeat_purchase="
+insert overwrite table ${APP}.ads_repeat_purchase
+select * from ${APP}.ads_repeat_purchase
+union
+select
+    '$do_date' dt,
+    recent_days,
+    tm_id,
+    tm_name,
+    cast(sum(if(order_count>=2,1,0))/sum(if(order_count>=1,1,0))*100 as decimal(16,2))
+from
+(
+    select
+        recent_days,
+        user_id,
+        tm_id,
+        tm_name,
+        sum(order_count) order_count
+    from
+    (
+        select
+            recent_days,
+            user_id,
+            sku_id,
+            count(*) order_count
+        from ${APP}.dwd_order_detail lateral view explode(Array(1,7,30)) tmp as recent_days
+        where dt>=date_add('$do_date',-29)
+        and dt>=date_add('$do_date',-recent_days+1)
+        group by recent_days, user_id,sku_id
+    )t1
+    left join
+    (
+        select
+            id,
+            tm_id,
+            tm_name
+        from ${APP}.dim_sku_info
+        where dt='$do_date'
+    )t2
+    on t1.sku_id=t2.id
+    group by recent_days,user_id,tm_id,tm_name
+)t3
+group by recent_days,tm_id,tm_name;
+"
+
+ads_user_action="
+with
+tmp_page as
+(
+    select
+        '$do_date' dt,
+        recent_days,
+        sum(if(array_contains(pages,'home'),1,0)) home_count,
+        sum(if(array_contains(pages,'good_detail'),1,0)) good_detail_count
+    from
+    (
+        select
+            recent_days,
+            mid_id,
+            collect_set(page_id) pages
+        from
+        (
+            select
+                dt,
+                mid_id,
+                page.page_id
+            from ${APP}.dws_visitor_action_daycount lateral view explode(page_stats) tmp as page
+            where dt>=date_add('$do_date',-29)
+            and page.page_id in('home','good_detail')
+        )t1 lateral view explode(Array(1,7,30)) tmp as recent_days
+        where dt>=date_add('$do_date',-recent_days+1)
+        group by recent_days,mid_id
+    )t2
+    group by recent_days
+),
+tmp_cop as
+(
+    select
+        '$do_date' dt,
+        recent_days,
+        sum(if(cart_count>0,1,0)) cart_count,
+        sum(if(order_count>0,1,0)) order_count,
+        sum(if(payment_count>0,1,0)) payment_count
+    from
+    (
+        select
+            recent_days,
+            user_id,
+            case
+                when recent_days=1 then cart_last_1d_count
+                when recent_days=7 then cart_last_7d_count
+                when recent_days=30 then cart_last_30d_count
+            end cart_count,
+            case
+                when recent_days=1 then order_last_1d_count
+                when recent_days=7 then order_last_7d_count
+                when recent_days=30 then order_last_30d_count
+            end order_count,
+            case
+                when recent_days=1 then payment_last_1d_count
+                when recent_days=7 then payment_last_7d_count
+                when recent_days=30 then payment_last_30d_count
+            end payment_count
+        from ${APP}.dwt_user_topic lateral view explode(Array(1,7,30)) tmp as recent_days
+        where dt='$do_date'
+    )t1
+    group by recent_days
+)
+insert overwrite table ${APP}.ads_user_action
+select * from ${APP}.ads_user_action
+union
+select
+    tmp_page.dt,
+    tmp_page.recent_days,
+    home_count,
+    good_detail_count,
+    cart_count,
+    order_count,
+    payment_count
+from tmp_page
+join tmp_cop
+on tmp_page.recent_days=tmp_cop.recent_days;
+"
+
+ads_user_change="
+insert overwrite table ${APP}.ads_user_change
+select * from ${APP}.ads_user_change
+union
+select
+    churn.dt,
+    user_churn_count,
+    user_back_count
+from
+(
+    select
+        '$do_date' dt,
+        count(*) user_churn_count
+    from ${APP}.dwt_user_topic
+    where dt='$do_date'
+    and login_date_last=date_add('$do_date',-7)
+)churn
+join
+(
+    select
+        '$do_date' dt,
+        count(*) user_back_count
+    from
+    (
+        select
+            user_id,
+            login_date_last
+        from ${APP}.dwt_user_topic
+        where dt='$do_date'
+        and login_date_last='$do_date'
+    )t1
+    join
+    (
+        select
+            user_id,
+            login_date_last login_date_previous
+        from ${APP}.dwt_user_topic
+        where dt=date_add('$do_date',-1)
+    )t2
+    on t1.user_id=t2.user_id
+    where datediff(login_date_last,login_date_previous)>=8
+)back
+on churn.dt=back.dt;
+"
+
+ads_user_retention="
+insert overwrite table ${APP}.ads_user_retention
+select * from ${APP}.ads_user_retention
+union
+select
+    '$do_date',
+    login_date_first create_date,
+    datediff('$do_date',login_date_first) retention_day,
+    sum(if(login_date_last='$do_date',1,0)) retention_count,
+    count(*) new_user_count,
+    cast(sum(if(login_date_last='$do_date',1,0))/count(*)*100 as decimal(16,2)) retention_rate
+from ${APP}.dwt_user_topic
+where dt='$do_date'
+and login_date_first>=date_add('$do_date',-7)
+and login_date_first<'$do_date'
+group by login_date_first;
+"
+
+ads_user_total="
+insert overwrite table ${APP}.ads_user_total
+select * from ${APP}.ads_user_total
+union
+select
+    '$do_date',
+    recent_days,
+    sum(if(login_date_first>=recent_days_ago,1,0)) new_user_count,
+    sum(if(order_date_first>=recent_days_ago,1,0)) new_order_user_count,
+    sum(order_final_amount) order_final_amount,
+    sum(if(order_final_amount>0,1,0)) order_user_count,
+    sum(if(login_date_last>=recent_days_ago and order_final_amount=0,1,0)) no_order_user_count
+from
+(
+    select
+        recent_days,
+        user_id,
+        login_date_first,
+        login_date_last,
+        order_date_first,
+        case when recent_days=0 then order_final_amount
+             when recent_days=1 then order_last_1d_final_amount
+             when recent_days=7 then order_last_7d_final_amount
+             when recent_days=30 then order_last_30d_final_amount
+        end order_final_amount,
+        if(recent_days=0,'1970-01-01',date_add('$do_date',-recent_days+1)) recent_days_ago
+    from ${APP}.dwt_user_topic lateral view explode(Array(0,1,7,30)) tmp as recent_days
+    where dt='$do_date'
+)t1
+group by recent_days;
+"
+
+ads_visit_stats="
+insert overwrite table ${APP}.ads_visit_stats
+select * from ${APP}.ads_visit_stats
+union
+select
+    '$do_date' dt,
+    is_new,
+    recent_days,
+    channel,
+    count(distinct(mid_id)) uv_count,
+    cast(sum(duration)/1000 as bigint) duration_sec,
+    cast(avg(duration)/1000 as bigint) avg_duration_sec,
+    sum(page_count) page_count,
+    cast(avg(page_count) as bigint) avg_page_count,
+    count(*) sv_count,
+    sum(if(page_count=1,1,0)) bounce_count,
+    cast(sum(if(page_count=1,1,0))/count(*)*100 as decimal(16,2)) bounce_rate
+from
+(
+    select
+        session_id,
+        mid_id,
+        is_new,
+        recent_days,
+        channel,
+        count(*) page_count,
+        sum(during_time) duration
+    from
+    (
+        select
+            mid_id,
+            channel,
+            recent_days,
+            is_new,
+            last_page_id,
+            page_id,
+            during_time,
+            concat(mid_id,'-',last_value(if(last_page_id is null,ts,null),true) over (partition by recent_days,mid_id order by ts)) session_id
+        from
+        (
+            select
+                mid_id,
+                channel,
+                last_page_id,
+                page_id,
+                during_time,
+                ts,
+                recent_days,
+                if(visit_date_first>=date_add('$do_date',-recent_days+1),'1','0') is_new
+            from
+            (
+                select
+                    t1.mid_id,
+                    t1.channel,
+                    t1.last_page_id,
+                    t1.page_id,
+                    t1.during_time,
+                    t1.dt,
+                    t1.ts,
+                    t2.visit_date_first
+                from
+                (
+                    select
+                        mid_id,
+                        channel,
+                        last_page_id,
+                        page_id,
+                        during_time,
+                        dt,
+                        ts
+                    from ${APP}.dwd_page_log
+                    where dt>=date_add('$do_date',-30)
+                )t1
+                left join
+                (
+                    select
+                        mid_id,
+                        visit_date_first
+                    from ${APP}.dwt_visitor_topic
+                    where dt='$do_date'
+                )t2
+                on t1.mid_id=t2.mid_id
+            )t3 lateral view explode(Array(1,7,30)) tmp as recent_days
+            where dt>=date_add('$do_date',-recent_days+1)
+        )t4
+    )t5
+    group by session_id,mid_id,is_new,recent_days,channel
+)t6
+group by is_new,recent_days,channel;
+"
+
+case $1 in
+    "ads_activity_stats" )
+        hive -e "$ads_activity_stats" 
+    ;;
+    "ads_coupon_stats" )
+        hive -e "$ads_coupon_stats"
+    ;;
+    "ads_order_by_province" )
+        hive -e "$ads_order_by_province" 
+    ;;
+    "ads_order_spu_stats" )
+        hive -e "$ads_order_spu_stats" 
+    ;;
+    "ads_order_total" )
+        hive -e "$ads_order_total" 
+    ;;
+    "ads_page_path" )
+        hive -e "$ads_page_path" 
+    ;;
+    "ads_repeat_purchase" )
+        hive -e "$ads_repeat_purchase" 
+    ;;
+    "ads_user_action" )
+        hive -e "$ads_user_action" 
+    ;;
+    "ads_user_change" )
+        hive -e "$ads_user_change" 
+    ;;
+    "ads_user_retention" )
+        hive -e "$ads_user_retention" 
+    ;;
+    "ads_user_total" )
+        hive -e "$ads_user_total" 
+    ;;
+    "ads_visit_stats" )
+        hive -e "$ads_visit_stats" 
+    ;;
+    "all" )
+        hive -e "$ads_activity_stats$ads_coupon_stats$ads_order_by_province$ads_order_spu_stats$ads_order_total$ads_page_path$ads_repeat_purchase$ads_user_action$ads_user_change$ads_user_retention$ads_user_total$ads_visit_stats"
+    ;;
+esac
+```
+
+**修改权限**
+
+chmod +x bin/dwt_to_ads.sh
+
+**执行脚本**
+
+dwt_to_ads.sh all 2020-06-14
